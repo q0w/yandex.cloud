@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import contextlib
 import json
+import sys
 import traceback
 from typing import Any
 from typing import Generator
 from typing import Iterable
 from typing import Mapping
-from typing import TYPE_CHECKING
 from typing import TypedDict
 
 from ansible.module_utils.basic import AnsibleModule
@@ -22,7 +22,11 @@ except ImportError:
 else:
     HAS_YANDEX = True
 
-if TYPE_CHECKING:
+if sys.version_info >= (3, 11):
+    from typing import Unpack
+    from typing import NotRequired
+    from typing import Required
+else:
     from typing_extensions import Unpack
     from typing_extensions import NotRequired
     from typing_extensions import Required
@@ -82,7 +86,7 @@ class ModuleParams(TypedDict):
     mutually_exclusive: NotRequired[list[tuple[str, ...]]]
     required_together: NotRequired[list[tuple[str, ...]]]
     required_one_of: NotRequired[list[tuple[str, ...]]]
-    required_if: NotRequired[list[tuple[str, ...]]]
+    required_if: NotRequired[list[tuple[str, str, tuple[str, ...], bool]]]
     required_by: NotRequired[dict[str, Iterable[str]]]
 
 
