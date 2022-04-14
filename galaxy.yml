@@ -1,0 +1,12 @@
+namespace: q0w
+name: yandexcloud
+version: 0.0.1
+readme: README.md
+authors:
+  - q0w
+description: null
+build_ignore:
+  - .gitignore
+  - .pre-commit.config.yaml
+  - '*.tar.gz'
+  - venv
