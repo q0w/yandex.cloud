@@ -27,9 +27,9 @@ if sys.version_info >= (3, 11):
     from typing import NotRequired
     from typing import Required
 else:
-    from typing_extensions import Unpack
-    from typing_extensions import NotRequired
-    from typing_extensions import Required
+    from .._vendor.typing_extensions import Unpack
+    from .._vendor.typing_extensions import NotRequired
+    from .._vendor.typing_extensions import Required
 
 
 def _get_auth_settings(
@@ -79,7 +79,7 @@ def log_grpc_error(module: AnsibleModule) -> Generator[None, None, None]:
         module.fail_json(msg=state.details)
 
 
-class ModuleParams(TypedDict):
+class ModuleParams(TypedDict, total=False):
     argument_spec: Required[Mapping[str, Any]]
     bypass_checks: NotRequired[bool]
     no_log: NotRequired[bool]

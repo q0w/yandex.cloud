@@ -30,12 +30,12 @@ if sys.version_info >= (3, 11):
     from typing import Required
     from typing import Unpack
 else:
-    from typing_extensions import NotRequired
-    from typing_extensions import Required
-    from typing_extensions import Unpack
+    from .._vendor.typing_extensions import NotRequired
+    from .._vendor.typing_extensions import Required
+    from .._vendor.typing_extensions import Unpack
 
 
-class CreateFunctionParams(TypedDict):
+class CreateFunctionParams(TypedDict, total=False):
     folder_id: Required[str]
     name: NotRequired[str]
     description: NotRequired[str]

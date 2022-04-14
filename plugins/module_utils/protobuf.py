@@ -3,6 +3,11 @@
 from __future__ import annotations
 
 import datetime
+from typing import Any
+from typing import Callable
+from typing import Generator
+from typing import Iterable
+from typing import Mapping
 from typing import TYPE_CHECKING
 
 from google.protobuf.descriptor import FieldDescriptor
@@ -13,12 +18,6 @@ if TYPE_CHECKING:
     from google.protobuf.internal.extension_dict import (
         _ExtensionFieldDescriptor,
     )
-    from typing import Any
-    from typing import Callable
-    from typing import Generator
-    from typing import Iterable
-    from typing import Mapping
-    from typing import TYPE_CHECKING
 
 __all__ = [
     'protobuf_to_dict',
