@@ -11,10 +11,10 @@ from typing import Mapping
 from typing import TYPE_CHECKING
 
 from google.protobuf.descriptor import FieldDescriptor
-from google.protobuf.message import Message
-from google.protobuf.timestamp_pb2 import Timestamp
 
 if TYPE_CHECKING:
+    from google.protobuf.message import Message
+    from google.protobuf.timestamp_pb2 import Timestamp
     from google.protobuf.internal.extension_dict import (
         _ExtensionFieldDescriptor,
     )

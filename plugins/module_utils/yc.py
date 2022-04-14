@@ -4,11 +4,7 @@ import contextlib
 import json
 import sys
 import traceback
-from typing import Any
-from typing import Generator
-from typing import Iterable
-from typing import Mapping
-from typing import TypedDict
+from typing import TYPE_CHECKING
 
 from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.basic import missing_required_lib
@@ -22,14 +18,31 @@ except ImportError:
 else:
     HAS_YANDEX = True
 
-if sys.version_info >= (3, 11):
-    from typing import Unpack
-    from typing import NotRequired
-    from typing import Required
-else:
-    from .._vendor.typing_extensions import Unpack
-    from .._vendor.typing_extensions import NotRequired
-    from .._vendor.typing_extensions import Required
+if TYPE_CHECKING:
+    from typing import Any
+    from typing import Generator
+    from typing import Iterable
+    from typing import Mapping
+    from typing import TypedDict
+
+    if sys.version_info >= (3, 11):
+        from typing import Unpack
+        from typing import NotRequired
+        from typing import Required
+    else:
+        from typing_extensions import Unpack
+        from typing_extensions import NotRequired
+        from typing_extensions import Required
+
+    class ModuleParams(TypedDict, total=False):
+        argument_spec: Required[Mapping[str, Any]]
+        bypass_checks: NotRequired[bool]
+        no_log: NotRequired[bool]
+        mutually_exclusive: NotRequired[list[tuple[str, ...]]]
+        required_together: NotRequired[list[tuple[str, ...]]]
+        required_one_of: NotRequired[list[tuple[str, ...]]]
+        required_if: NotRequired[list[tuple[str, str, tuple[str, ...], bool]]]
+        required_by: NotRequired[dict[str, Iterable[str]]]
 
 
 def _get_auth_settings(
@@ -77,17 +90,6 @@ def log_grpc_error(module: AnsibleModule) -> Generator[None, None, None]:
     except grpc._channel._InactiveRpcError as e:
         (state,) = e.args
         module.fail_json(msg=state.details)
-
-
-class ModuleParams(TypedDict, total=False):
-    argument_spec: Required[Mapping[str, Any]]
-    bypass_checks: NotRequired[bool]
-    no_log: NotRequired[bool]
-    mutually_exclusive: NotRequired[list[tuple[str, ...]]]
-    required_together: NotRequired[list[tuple[str, ...]]]
-    required_one_of: NotRequired[list[tuple[str, ...]]]
-    required_if: NotRequired[list[tuple[str, str, tuple[str, ...], bool]]]
-    required_by: NotRequired[dict[str, Iterable[str]]]
 
 
 def init_module(**kwargs: Unpack[ModuleParams]):

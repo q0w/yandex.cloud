@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 import sys
-from typing import Any
-from typing import Mapping
-from typing import TypedDict
+from typing import TYPE_CHECKING
 
 from ansible.module_utils.basic import AnsibleModule
 
@@ -25,28 +23,31 @@ try:
 except ImportError:
     pass
 
-if sys.version_info >= (3, 11):
-    from typing import NotRequired
-    from typing import Required
-    from typing import Unpack
-else:
-    from .._vendor.typing_extensions import NotRequired
-    from .._vendor.typing_extensions import Required
-    from .._vendor.typing_extensions import Unpack
+if TYPE_CHECKING:
+    from typing import Any
+    from typing import Mapping
+    from typing import TypedDict
 
+    if sys.version_info >= (3, 11):
+        from typing import NotRequired
+        from typing import Required
+        from typing import Unpack
+    else:
+        from typing_extensions import NotRequired
+        from typing_extensions import Required
+        from typing_extensions import Unpack
 
-class CreateFunctionParams(TypedDict, total=False):
-    folder_id: Required[str]
-    name: NotRequired[str]
-    description: NotRequired[str]
-    labels: NotRequired[Mapping[str, str]]
+    class CreateFunctionParams(TypedDict, total=False):
+        folder_id: Required[str]
+        name: NotRequired[str]
+        description: NotRequired[str]
+        labels: NotRequired[Mapping[str, str]]
 
-
-class ListFunctionParams(TypedDict):
-    folder_id: Required[str]
-    page_size: NotRequired[int]
-    page_token: NotRequired[str]
-    filter: NotRequired[str]
+    class ListFunctionParams(TypedDict):
+        folder_id: Required[str]
+        page_size: NotRequired[int]
+        page_token: NotRequired[str]
+        filter: NotRequired[str]
 
 
 def list_functions(
