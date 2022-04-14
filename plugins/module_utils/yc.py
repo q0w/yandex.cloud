@@ -4,7 +4,12 @@ import contextlib
 import json
 import sys
 import traceback
+from typing import Any
+from typing import Generator
+from typing import Iterable
+from typing import Mapping
 from typing import TYPE_CHECKING
+from typing import TypedDict
 
 from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.basic import missing_required_lib
@@ -18,21 +23,14 @@ except ImportError:
 else:
     HAS_YANDEX = True
 
-if TYPE_CHECKING:
-    from typing import Any
-    from typing import Generator
-    from typing import Iterable
-    from typing import Mapping
-    from typing import TypedDict
-
-    if sys.version_info >= (3, 11):
-        from typing import Unpack
-        from typing import NotRequired
-        from typing import Required
-    else:
-        from typing_extensions import Unpack
-        from typing_extensions import NotRequired
-        from typing_extensions import Required
+if sys.version_info >= (3, 11):
+    from typing import Unpack
+    from typing import NotRequired
+    from typing import Required
+elif TYPE_CHECKING:
+    from typing_extensions import Unpack
+    from typing_extensions import NotRequired
+    from typing_extensions import Required
 
     class ModuleParams(TypedDict, total=False):
         argument_spec: Required[Mapping[str, Any]]

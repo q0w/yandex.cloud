@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import sys
+from typing import Any
+from typing import Mapping
 from typing import TYPE_CHECKING
+from typing import TypedDict
 
 from ansible.module_utils.basic import AnsibleModule
 
@@ -23,19 +26,14 @@ try:
 except ImportError:
     pass
 
-if TYPE_CHECKING:
-    from typing import Any
-    from typing import Mapping
-    from typing import TypedDict
-
-    if sys.version_info >= (3, 11):
-        from typing import NotRequired
-        from typing import Required
-        from typing import Unpack
-    else:
-        from typing_extensions import NotRequired
-        from typing_extensions import Required
-        from typing_extensions import Unpack
+if sys.version_info >= (3, 11):
+    from typing import NotRequired
+    from typing import Required
+    from typing import Unpack
+elif TYPE_CHECKING:
+    from typing_extensions import NotRequired
+    from typing_extensions import Required
+    from typing_extensions import Unpack
 
     class CreateFunctionParams(TypedDict, total=False):
         folder_id: Required[str]
