@@ -5,19 +5,24 @@ from typing import TYPE_CHECKING
 from typing import TypedDict
 
 from ansible.module_utils.basic import AnsibleModule
-from yandex.cloud.serverless.functions.v1.function_service_pb2 import (
-    CreateFunctionRequest,
-)
-from yandex.cloud.serverless.functions.v1.function_service_pb2 import (
-    ListFunctionsRequest,
-)
-from yandex.cloud.serverless.functions.v1.function_service_pb2_grpc import (
-    FunctionServiceStub,
-)
 
 from ..module_utils.protobuf import protobuf_to_dict
+from ..module_utils.yc import init_module
 from ..module_utils.yc import init_sdk
-from ..module_utils.yc import log_error
+from ..module_utils.yc import log_grpc_error
+
+try:
+    from yandex.cloud.serverless.functions.v1.function_service_pb2 import (
+        CreateFunctionRequest,
+    )
+    from yandex.cloud.serverless.functions.v1.function_service_pb2 import (
+        ListFunctionsRequest,
+    )
+    from yandex.cloud.serverless.functions.v1.function_service_pb2_grpc import (
+        FunctionServiceStub,
+    )
+except ImportError:
+    pass
 
 
 if TYPE_CHECKING:
@@ -46,7 +51,7 @@ def create_function(
     client: FunctionServiceStub,
     **kwargs: Unpack[CreateFunctionKwargs],
 ) -> dict[str, Any]:
-    with log_error(module):
+    with log_grpc_error(module):
         res = client.Create(CreateFunctionRequest(**kwargs))
     return protobuf_to_dict(res)
 
@@ -76,11 +81,11 @@ def main():
         ),
     ]
 
-    module = AnsibleModule(
+    module = init_module(
         argument_spec=argument_spec,
         required_if=required_if,
     )
-    sdk = init_sdk(module.params)
+    sdk = init_sdk(module)
     function_service = sdk.client(FunctionServiceStub)
     result = {}
     result['CreateFunction'] = create_function(
