@@ -18,6 +18,7 @@ try:
         ListFunctionsRequest,
         GetFunctionRequest,
         DeleteFunctionRequest,
+        UpdateFunctionRequest,
     )
     from yandex.cloud.serverless.functions.v1.function_service_pb2_grpc import (
         FunctionServiceStub,
@@ -41,6 +42,13 @@ if TYPE_CHECKING:
         page_size: NotRequired[int]
         page_token: NotRequired[str]
         filter: NotRequired[str]
+
+    class UpdateFunctionParams(TypedDict, total=False):
+        function_id: Required[str]
+        # TODO: update_mask
+        name: NotRequired[str]
+        description: NotRequired[str]
+        labels: NotRequired[Mapping[str, str]]
 
 
 # TODO: rename
@@ -66,14 +74,15 @@ class Function(TypedDict, total=False):
     status: int
 
 
-# TODO: add 'done', 'result', 'error', 'response'
-class Operation(TypedDict):
+# TODO: add 'done', 'result', 'error'
+class Operation(TypedDict, total=False):
     id: str
     description: str
     created_at: Time
     created_by: str
     modified_at: Time
     metadata: Metadata
+    response: Metadata
 
 
 # TODO: add 'next_page_token'
@@ -120,8 +129,20 @@ def create_function(
     client: FunctionServiceStub,
     **kwargs: Unpack[CreateFunctionParams],
 ) -> Operation:
-    res = client.Create(CreateFunctionRequest(**kwargs))
-    return cast(Operation, protobuf_to_dict(res))
+    return cast(
+        Operation,
+        protobuf_to_dict(client.Create(CreateFunctionRequest(**kwargs))),
+    )
+
+
+def update_function(
+    client: FunctionServiceStub,
+    **kwargs: Unpack[UpdateFunctionParams],
+) -> Operation:
+    return cast(
+        Operation,
+        protobuf_to_dict(client.Update(UpdateFunctionRequest(**kwargs))),
+    )
 
 
 def main() -> None:
@@ -130,6 +151,7 @@ def main() -> None:
         name=dict(
             type='str',
         ),
+        description=dict(type='str'),
         function_id=dict(type='str'),
         state=dict(
             type='str',
@@ -183,11 +205,26 @@ def main() -> None:
             curr_function = fs['functions'][0]
 
     if module.params.get('state') == 'present':
-        result['CreateFunction'] = log_grpc_error(module)(create_function)(
-            function_service,
-            folder_id=module.params.get('folder_id'),
-            name=module.params.get('name'),
-        )
+        if curr_function:
+            resp = log_grpc_error(module)(update_function)(
+                function_service,
+                function_id=curr_function.get('id')
+                or module.params.get('function_id'),
+                # TODO: 'update_mask'
+                name=module.params.get('name'),
+                description=module.params.get('description'),
+                labels=module.params.get('labels'),
+            )
+            # TODO: Fix decoding bytes for json.dumps
+            resp.pop('metadata')
+            resp.pop('response')
+            result['UpdateFunction'] = resp
+        else:
+            result['CreateFunction'] = log_grpc_error(module)(create_function)(
+                function_service,
+                folder_id=module.params.get('folder_id'),
+                name=module.params.get('name'),
+            )
 
     elif module.params.get('state') == 'absent' and curr_function is not None:
         result['DeleteFunction'] = log_grpc_error(module)(delete_function)(
