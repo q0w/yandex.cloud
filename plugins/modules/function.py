@@ -135,40 +135,44 @@ def main() -> None:
     function_id = module.params.get('function_id')
     folder_id = module.params.get('folder_id')
     name = module.params.get('name')
-    curr_function = log_grpc_error(module)(get_function)(
-        function_service,
-        function_id=function_id,
-        folder_id=folder_id,
-        name=name,
-    )
+    with log_grpc_error(module):
+        curr_function = get_function(
+            function_service,
+            function_id=function_id,
+            folder_id=folder_id,
+            name=name,
+        )
 
     if module.params.get('state') == 'present':
         if curr_function:
-            resp = log_grpc_error(module)(update_function)(
-                function_service,
-                function_id=curr_function.get('id')
-                or module.params.get('function_id'),
-                # TODO: 'update_mask'
-                name=module.params.get('name'),
-                description=module.params.get('description'),
-                labels=module.params.get('labels'),
-            )
+            with log_grpc_error(module):
+                resp = update_function(
+                    function_service,
+                    function_id=curr_function.get('id')
+                    or module.params.get('function_id'),
+                    # TODO: 'update_mask'
+                    name=module.params.get('name'),
+                    description=module.params.get('description'),
+                    labels=module.params.get('labels'),
+                )
             # TODO: Fix decoding bytes for json.dumps
             resp.pop('metadata')
             resp.pop('response')
             result['UpdateFunction'] = resp
         else:
-            result['CreateFunction'] = log_grpc_error(module)(create_function)(
-                function_service,
-                folder_id=module.params.get('folder_id'),
-                name=module.params.get('name'),
-            )
+            with log_grpc_error(module):
+                result['CreateFunction'] = create_function(
+                    function_service,
+                    folder_id=module.params.get('folder_id'),
+                    name=module.params.get('name'),
+                )
 
     elif module.params.get('state') == 'absent' and curr_function is not None:
-        result['DeleteFunction'] = log_grpc_error(module)(delete_function)(
-            function_service,
-            curr_function.get('id') or module.params.get('function_id'),
-        )
+        with log_grpc_error(module):
+            result['DeleteFunction'] = delete_function(
+                function_service,
+                curr_function.get('id') or module.params.get('function_id'),
+            )
 
     module.exit_json(**result)
 

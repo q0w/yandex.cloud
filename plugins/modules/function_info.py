@@ -133,25 +133,28 @@ def main():
     if function_id:
         curr_function = None
     else:
-        curr_function = log_grpc_error(module)(get_function)(
-            function_service,
-            folder_id=folder_id,
-            name=name,
-        )
+        with log_grpc_error(module):
+            curr_function = get_function(
+                function_service,
+                folder_id=folder_id,
+                name=name,
+            )
     if curr_function:
         function_id = curr_function.get('id')
         assert function_id is not None
-        resp = log_grpc_error(module)(list_function_versions)(
-            function_service,
-            folder_id=folder_id,
-            function_id=function_id,
-        )
+        with log_grpc_error(module):
+            resp = list_function_versions(
+                function_service,
+                folder_id=folder_id,
+                function_id=function_id,
+            )
     else:
-        resp = log_grpc_error(module)(list_function_versions)(
-            function_service,
-            folder_id=folder_id,
-            function_id=function_id,
-        )
+        with log_grpc_error(module):
+            resp = list_function_versions(
+                function_service,
+                folder_id=folder_id,
+                function_id=function_id,
+            )
 
     result['ListFunctionsVersions'] = resp
     result['changed'] = False

@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import functools
+import contextlib
 import json
 import traceback
 from typing import Any
-from typing import Callable
+from typing import Generator
 from typing import Iterable
 from typing import Mapping
 from typing import MutableMapping
@@ -84,26 +84,13 @@ def init_sdk(module: AnsibleModule) -> yandexcloud.SDK:
     )
 
 
-def log_grpc_error(
-    module: AnsibleModule,
-) -> Callable[[Callable[P, R]], Callable[P, R]]:
-    def action(
-        f: Callable[P, R],
-    ) -> Callable[P, R]:
-        @functools.wraps(f)
-        def req(*args: P.args, **kwargs: P.kwargs) -> R:
-            try:
-                res = f(*args, **kwargs)
-            except grpc._channel._InactiveRpcError as e:
-                (state,) = e.args
-                module.fail_json(msg=state.details)
-                raise AssertionError('unreachable')
-            else:
-                return res
-
-        return req
-
-    return action
+@contextlib.contextmanager
+def log_grpc_error(module: AnsibleModule) -> Generator[None, None, None]:
+    try:
+        yield
+    except grpc._channel._InactiveRpcError as e:
+        (state,) = e.args
+        module.fail_json(msg=state.details)
 
 
 def init_module(**params: Unpack[ModuleParams]) -> AnsibleModule:
