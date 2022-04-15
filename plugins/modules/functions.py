@@ -51,8 +51,7 @@ if TYPE_CHECKING:
         labels: NotRequired[Mapping[str, str]]
 
 
-# TODO: rename
-class Timestamp(TypedDict):
+class Timestamp(TypedDict, total=False):
     seconds: int
     nanos: int
 
@@ -88,6 +87,44 @@ class Operation(TypedDict, total=False):
 # TODO: add 'next_page_token'
 class ListFunctionsResponse(TypedDict):
     functions: list[Function]
+
+
+class Resources(TypedDict):
+    memory: int
+
+
+class Connectivity(TypedDict, total=False):
+    network_id: str
+    subnet_id: list[str]
+
+
+# TODO: total=false ?
+class Secret(TypedDict):
+    id: str
+    version_id: str
+    key: str
+    reference: str
+    environment_variable: str
+
+
+class FunctionVersion(TypedDict, total=False):
+    id: str
+    function_id: str
+    description: str
+    created_at: Timestamp
+    runtime: str
+    entrypoint: str
+    resources: Resources
+    execution_timeout: Timestamp
+    service_account_id: str
+    image_size: int
+    status: int
+    tags: list[str]
+    log_group_id: str
+    environment: Mapping[str, str]
+    connectivity: Connectivity
+    named_service_accounts: Mapping[str, str]
+    secrets: list[Secret]
 
 
 def get_function(
@@ -145,6 +182,33 @@ def update_function(
     )
 
 
+def get_version(
+    client: FunctionServiceStub,
+    function_version_id: str,
+) -> FunctionVersion:
+    return cast(
+        FunctionVersion,
+        protobuf_to_dict(
+            client.GetVersion(function_version_id=function_version_id),
+        ),
+    )
+
+
+# TODO: GetVersion
+# TODO: GetVersionByTag
+# TODO: ListVersions
+# TODO: SetTag
+# TODO: RemoveTag
+# TODO: ListTagHistory
+# TODO: CreateVersion
+# TODO: ListRuntimes
+# TODO: ListOperations
+# TODO: ListAccessBindings
+# TODO: SetAccessBindings
+# TODO: UpdateAccessBindings
+# TODO: ListScalingPolicies
+# TODO: SetScalingPolicy
+# TODO: RemoveScalingPolicy
 def main() -> None:
     # TODO: manipulate "changed" state after success
     argument_spec = dict(

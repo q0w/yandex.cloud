@@ -103,7 +103,7 @@ def log_grpc_error(
     return action
 
 
-def init_module(**kwargs: Unpack[ModuleParams]):
+def init_module(**kwargs: Unpack[ModuleParams]) -> AnsibleModule:
     module = AnsibleModule(**kwargs)
     if not HAS_YANDEX:
         module.fail_json(
