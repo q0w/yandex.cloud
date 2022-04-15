@@ -154,6 +154,8 @@ def main():
                 function_id=function_id,
             )
     elif name and folder_id:
+        # FIXME: somehow filter by name does not work
+        # FIXME: workaround: filter functions by name using ListFunctions
         with log_grpc_error(module):
             curr_function = get_function(
                 function_service,
