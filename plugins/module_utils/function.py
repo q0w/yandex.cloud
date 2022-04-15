@@ -28,6 +28,17 @@ if TYPE_CHECKING:
         page_token: NotRequired[str]
         filter: NotRequired[str]
 
+    class Function(TypedDict, total=False):
+        id: Required[str]
+        folder_id: Required[str]
+        created_at: Required[Timestamp]
+        name: NotRequired[str]
+        description: NotRequired[str]
+        labels: NotRequired[dict[str, str]]
+        log_group_id: Required[str]
+        http_invoke_url: Required[str]
+        status: Required[int]
+
 
 class GetFunctionParams(TypedDict, total=False):
     folder_id: str
@@ -43,18 +54,6 @@ class Timestamp(TypedDict, total=False):
 class Metadata(TypedDict):
     type_url: str
     value: bytes
-
-
-class Function(TypedDict, total=False):
-    id: str
-    folder_id: str
-    created_at: Timestamp
-    name: str
-    description: str
-    labels: dict[str, str]
-    log_group_id: str
-    http_invoke_url: str
-    status: int
 
 
 # TODO: add 'next_page_token'
@@ -82,7 +81,7 @@ def _get_function_by_id(
     except grpc._channel._InactiveRpcError:
         return func
     else:
-        return cast(Function, protobuf_to_dict(res))
+        return cast('Function', protobuf_to_dict(res))
 
 
 def _get_function_by_name(

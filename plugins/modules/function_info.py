@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 from typing import cast
 from typing import Mapping
+from typing import overload
 from typing import TYPE_CHECKING
 from typing import TypedDict
 
@@ -29,12 +30,15 @@ if TYPE_CHECKING:
     from typing_extensions import Unpack
 
     class ListVersionsParams(TypedDict, total=False):
-        # either folder_id or function_id is required
-        folder_id: Required[str]
-        function_id: NotRequired[str]
         page_size: NotRequired[int]
         page_token: NotRequired[str]
         filter: NotRequired[str]
+
+    class _ByFunctionId(ListVersionsParams):
+        function_id: Required[str]
+
+    class _ByFolderId(ListVersionsParams):
+        folder_id: Required[str]
 
 
 class Resources(TypedDict):
@@ -92,11 +96,24 @@ def get_version(
     )
 
 
-# TODO: add page_size, page_token, filter
+@overload
 def list_function_versions(
     client: FunctionServiceStub,
-    **kwargs: Unpack[ListVersionsParams],
+    **kwargs: Unpack[_ByFolderId],
 ) -> ListFunctionsVersionsResponse:
+    ...
+
+
+@overload
+def list_function_versions(
+    client: FunctionServiceStub,
+    **kwargs: Unpack[_ByFunctionId],
+) -> ListFunctionsVersionsResponse:
+    ...
+
+
+# TODO: add page_size, page_token, filter
+def list_function_versions(client, **kwargs):
     return cast(
         ListFunctionsVersionsResponse,
         protobuf_to_dict(
@@ -131,32 +148,32 @@ def main():
     folder_id = module.params.get('folder_id')
     name = module.params.get('name')
     if function_id:
-        curr_function = None
-    else:
+        with log_grpc_error(module):
+            result['ListFunctionsVersions'] = list_function_versions(
+                function_service,
+                function_id=function_id,
+            )
+    elif name and folder_id:
         with log_grpc_error(module):
             curr_function = get_function(
                 function_service,
                 folder_id=folder_id,
                 name=name,
             )
-    if curr_function:
-        function_id = curr_function.get('id')
-        assert function_id is not None
+        if curr_function:
+            function_id = curr_function.get('id')
+            with log_grpc_error(module):
+                result['ListFunctionsVersions'] = list_function_versions(
+                    function_service,
+                    function_id=function_id,
+                )
+    elif folder_id:
         with log_grpc_error(module):
-            resp = list_function_versions(
+            result['ListFunctionsVersions'] = list_function_versions(
                 function_service,
                 folder_id=folder_id,
-                function_id=function_id,
-            )
-    else:
-        with log_grpc_error(module):
-            resp = list_function_versions(
-                function_service,
-                folder_id=folder_id,
-                function_id=function_id,
             )
 
-    result['ListFunctionsVersions'] = resp
     result['changed'] = False
     if module.check_mode:
         result['msg'] = 'Check mode set but ignored for fact gathering only.'
