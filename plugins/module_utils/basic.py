@@ -10,7 +10,6 @@ from typing import Mapping
 from typing import MutableMapping
 from typing import TYPE_CHECKING
 from typing import TypedDict
-from typing import TypeVar
 
 from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.basic import missing_required_lib
@@ -25,7 +24,6 @@ else:
     HAS_YANDEX = True
 
 if TYPE_CHECKING:
-    from typing_extensions import ParamSpec
     from typing_extensions import Unpack
     from typing_extensions import NotRequired
     from typing_extensions import Required
@@ -41,9 +39,6 @@ if TYPE_CHECKING:
         supports_check_mode: NotRequired[bool]
         required_if: NotRequired[list[tuple[str, str, tuple[str, ...], bool]]]
         required_by: NotRequired[Mapping[str, Iterable[str]]]
-
-    P = ParamSpec('P')
-    R = TypeVar('R')
 
 
 def _get_auth_settings(
