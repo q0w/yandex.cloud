@@ -1,8 +1,8 @@
-[flake8]
+[tool.flake8]
 max-line-length = 88
 min_python_version = 3.8
 
-[mypy]
+[tool.mypy]
 allow_redefinition = false
 check_untyped_defs = true
 ignore_errors = false
@@ -17,3 +17,9 @@ warn_redundant_casts = true
 warn_unused_configs = true
 warn_unreachable = true
 warn_no_return = true
+
+[tool.pyright]
+pythonVersion = "3.8"
+#typeCheckingMode = "strict"
+venvPath = "."
+venv = "venv"

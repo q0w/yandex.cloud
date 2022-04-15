@@ -15,16 +15,12 @@ from yandex.cloud.serverless.functions.v1.function_service_pb2_grpc import (
     FunctionServiceStub,
 )
 
-from ..module_utils.basic import init_module as init_base_module
 from ..module_utils.protobuf import protobuf_to_dict
 
 if TYPE_CHECKING:
     from typing_extensions import NotRequired
     from typing_extensions import Required
     from typing_extensions import Unpack
-
-    from ..module_utils.basic import ModuleParams
-    from ansible.module_utils.basic import AnsibleModule
 
     class ListFunctionParams(TypedDict, total=False):
         folder_id: Required[str]
@@ -49,8 +45,7 @@ class Metadata(TypedDict):
     value: bytes
 
 
-# TODO: total = False
-class Function(TypedDict):
+class Function(TypedDict, total=False):
     id: str
     folder_id: str
     created_at: Timestamp
@@ -121,32 +116,3 @@ def get_function(
         return _get_function_by_name(client, folder_id, name)
     else:
         return None
-
-
-def init_module(**params: Unpack[ModuleParams]) -> AnsibleModule:
-    params['argument_spec'].update(
-        dict(
-            name=dict(type='str'),
-            function_id=dict(type='str'),
-            folder_id=dict(type='str'),
-        ),
-    )
-
-    required_one_of = [
-        ('function_id', 'name'),
-    ]
-
-    required_together = [
-        ('name', 'folder_id'),
-    ]
-
-    if 'required_one_of' in params:
-        params['required_one_of'] += required_one_of
-    else:
-        params['required_one_of'] = required_one_of
-
-    if 'required_together' in params:
-        params['required_together'] += required_together
-    else:
-        params['required_together'] = required_together
-    return init_base_module(**params)

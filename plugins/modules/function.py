@@ -5,10 +5,10 @@ from typing import Mapping
 from typing import TYPE_CHECKING
 from typing import TypedDict
 
+from ..module_utils.basic import init_module
 from ..module_utils.basic import init_sdk
 from ..module_utils.basic import log_grpc_error
 from ..module_utils.function import get_function
-from ..module_utils.function import init_module
 from ..module_utils.function import Metadata
 from ..module_utils.function import Timestamp
 from ..module_utils.protobuf import protobuf_to_dict
@@ -89,7 +89,6 @@ def update_function(
 
 # TODO: GetVersion
 # TODO: GetVersionByTag
-# TODO: ListVersions
 # TODO: SetTag
 # TODO: RemoveTag
 # TODO: ListTagHistory
@@ -107,6 +106,9 @@ def main() -> None:
     # TODO: manipulate "changed" state after success
     # TODO: check_mode
     argument_spec = dict(
+        name=dict(type='str'),
+        function_id=dict(type='str'),
+        folder_id=dict(type='str'),
         description=dict(type='str'),
         state=dict(
             type='str',
@@ -114,8 +116,18 @@ def main() -> None:
             choices=['present', 'absent'],
         ),
     )
+    required_one_of = [
+        ('function_id', 'name'),
+    ]
+    required_together = [
+        ('name', 'folder_id'),
+    ]
 
-    module = init_module(argument_spec=argument_spec)
+    module = init_module(
+        argument_spec=argument_spec,
+        required_one_of=required_one_of,
+        required_together=required_together,
+    )
     sdk = init_sdk(module)
     function_service = sdk.client(FunctionServiceStub)
     result = {}

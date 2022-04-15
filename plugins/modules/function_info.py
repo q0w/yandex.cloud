@@ -6,10 +6,10 @@ from typing import Mapping
 from typing import TYPE_CHECKING
 from typing import TypedDict
 
+from ..module_utils.basic import init_module
 from ..module_utils.basic import init_sdk
 from ..module_utils.basic import log_grpc_error
 from ..module_utils.function import get_function
-from ..module_utils.function import init_module
 from ..module_utils.function import Timestamp
 from ..module_utils.protobuf import protobuf_to_dict
 
@@ -111,24 +111,40 @@ def main():
         function_id=dict(type='str'),
         folder_id=dict(type='str'),
     )
-    module = init_module(argument_spec=argument_spec, supports_check_mode=True)
+    required_one_of = [
+        ('function_id', 'name', 'folder_id'),
+    ]
+    required_by = {
+        'name': 'folder_id',
+    }
+    module = init_module(
+        argument_spec=argument_spec,
+        required_one_of=required_one_of,
+        required_by=required_by,
+        supports_check_mode=True,
+    )
     sdk = init_sdk(module)
     function_service = sdk.client(FunctionServiceStub)
 
     result: dict[str, Any] = {}
-    folder_id = module.params.get('folder_id')
     function_id = module.params.get('function_id')
+    folder_id = module.params.get('folder_id')
     name = module.params.get('name')
-    curr_function = log_grpc_error(module)(get_function)(
-        function_service,
-        folder_id=folder_id,
-        name=name,
-    )
+    if function_id:
+        curr_function = None
+    else:
+        curr_function = log_grpc_error(module)(get_function)(
+            function_service,
+            folder_id=folder_id,
+            name=name,
+        )
     if curr_function:
+        function_id = curr_function.get('id')
+        assert function_id is not None
         resp = log_grpc_error(module)(list_function_versions)(
             function_service,
-            function_id=curr_function.get('id'),
             folder_id=folder_id,
+            function_id=function_id,
         )
     else:
         resp = log_grpc_error(module)(list_function_versions)(

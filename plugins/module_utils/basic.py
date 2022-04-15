@@ -6,6 +6,7 @@ import traceback
 from typing import Any
 from typing import Callable
 from typing import Iterable
+from typing import Mapping
 from typing import MutableMapping
 from typing import TYPE_CHECKING
 from typing import TypedDict
@@ -39,7 +40,7 @@ if TYPE_CHECKING:
         add_file_common_args: NotRequired[bool]
         supports_check_mode: NotRequired[bool]
         required_if: NotRequired[list[tuple[str, str, tuple[str, ...], bool]]]
-        required_by: NotRequired[dict[str, Iterable[str]]]
+        required_by: NotRequired[Mapping[str, Iterable[str]]]
 
     P = ParamSpec('P')
     R = TypeVar('R')
