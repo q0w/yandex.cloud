@@ -161,11 +161,10 @@ def main():
                 name=name,
             )
         if curr_function:
-            function_id = curr_function.get('id')
             with log_grpc_error(module):
                 result['ListFunctionsVersions'] = list_function_versions(
                     function_service,
-                    function_id=function_id,
+                    function_id=curr_function.get('id'),
                 )
     elif folder_id:
         with log_grpc_error(module):
