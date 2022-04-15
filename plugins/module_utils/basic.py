@@ -6,7 +6,7 @@ import traceback
 from typing import Any
 from typing import Callable
 from typing import Iterable
-from typing import Mapping
+from typing import MutableMapping
 from typing import TYPE_CHECKING
 from typing import TypedDict
 from typing import TypeVar
@@ -30,12 +30,14 @@ if TYPE_CHECKING:
     from typing_extensions import Required
 
     class ModuleParams(TypedDict, total=False):
-        argument_spec: Required[Mapping[str, Any]]
+        argument_spec: Required[MutableMapping[str, Any]]
         bypass_checks: NotRequired[bool]
         no_log: NotRequired[bool]
         mutually_exclusive: NotRequired[list[tuple[str, ...]]]
         required_together: NotRequired[list[tuple[str, ...]]]
         required_one_of: NotRequired[list[tuple[str, ...]]]
+        add_file_common_args: NotRequired[bool]
+        supports_check_mode: NotRequired[bool]
         required_if: NotRequired[list[tuple[str, str, tuple[str, ...], bool]]]
         required_by: NotRequired[dict[str, Iterable[str]]]
 
@@ -103,8 +105,33 @@ def log_grpc_error(
     return action
 
 
-def init_module(**kwargs: Unpack[ModuleParams]) -> AnsibleModule:
-    module = AnsibleModule(**kwargs)
+def init_module(**params: Unpack[ModuleParams]) -> AnsibleModule:
+    params['argument_spec'].update(
+        dict(
+            auth_kind=dict(
+                type='str',
+                choices=['oauth', 'sa_file'],
+                required=True,
+            ),
+            oauth_token=dict(type='str'),
+            sa_path=dict(type='str'),
+            sa_content=dict(type='str'),
+        ),
+    )
+    required_if = [
+        (
+            'auth_kind',
+            'sa_file',
+            ('sa_path', 'sa_content'),
+            True,
+        ),
+    ]
+    if 'required_if' in params:
+        params['required_if'] += required_if
+    else:
+        params['required_if'] = required_if
+
+    module = AnsibleModule(**params)
     if not HAS_YANDEX:
         module.fail_json(
             msg=missing_required_lib('yandexcloud'),
