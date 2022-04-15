@@ -52,7 +52,7 @@ if TYPE_CHECKING:
 
 
 # TODO: rename
-class Time(TypedDict):
+class Timestamp(TypedDict):
     seconds: int
     nanos: int
 
@@ -65,7 +65,7 @@ class Metadata(TypedDict):
 class Function(TypedDict, total=False):
     id: str
     folder_id: str
-    created_at: Time
+    created_at: Timestamp
     name: str
     description: str
     labels: dict[str, str]
@@ -78,9 +78,9 @@ class Function(TypedDict, total=False):
 class Operation(TypedDict, total=False):
     id: str
     description: str
-    created_at: Time
+    created_at: Timestamp
     created_by: str
-    modified_at: Time
+    modified_at: Timestamp
     metadata: Metadata
     response: Metadata
 
