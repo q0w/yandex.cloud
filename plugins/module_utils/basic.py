@@ -90,29 +90,22 @@ def log_grpc_error(module: AnsibleModule) -> Generator[None, None, None]:
 
 def init_module(**params: Unpack[ModuleParams]) -> AnsibleModule:
     params['argument_spec'].update(
-        dict(
-            auth_kind=dict(
-                type='str',
-                choices=['oauth', 'sa_file'],
-                required=True,
-            ),
-            oauth_token=dict(type='str'),
-            sa_path=dict(type='str'),
-            sa_content=dict(type='str'),
-        ),
+        {
+            'auth_kind': {
+                'type': 'str',
+                'choices': ['oauth', 'sa_file'],
+                'required': True,
+            },
+            'oauth_token': {'type': 'str'},
+            'sa_path': {'type': 'str'},
+            'sa_content': {'type': 'str'},
+        },
     )
-    required_if = [
-        (
-            'auth_kind',
-            'sa_file',
-            ('sa_path', 'sa_content'),
-            True,
-        ),
-    ]
-    if 'required_if' in params:
-        params['required_if'] += required_if
-    else:
-        params['required_if'] = required_if
+    required_if = params.get('required_if') or []
+    required_if.append(
+        ('auth_kind', 'sa_file', ('sa_path', 'sa_content'), True),
+    )
+    params['required_if'] = required_if
 
     module = AnsibleModule(**params)
     if not HAS_YANDEX:

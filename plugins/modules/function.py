@@ -105,17 +105,17 @@ def main() -> None:
     # TODO: NoReturn
     # TODO: manipulate "changed" state after success
     # TODO: check_mode
-    argument_spec = dict(
-        name=dict(type='str'),
-        function_id=dict(type='str'),
-        folder_id=dict(type='str'),
-        description=dict(type='str'),
-        state=dict(
-            type='str',
-            default='present',
-            choices=['present', 'absent'],
-        ),
-    )
+    argument_spec = {
+        'name': {'type': 'str'},
+        'function_id': {'type': 'str'},
+        'folder_id': {'type': 'str'},
+        'description': {'type': 'str'},
+        'state': {
+            'type': 'str',
+            'default': 'present',
+            'choices': ['present', 'absent'],
+        },
+    }
     required_one_of = [
         ('function_id', 'name'),
     ]

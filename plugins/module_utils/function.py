@@ -75,13 +75,11 @@ def _get_function_by_id(
     client: FunctionServiceStub,
     function_id: str,
 ) -> Function | None:
-    func = None
     try:
         res = client.Get(GetFunctionRequest(function_id=function_id))
     except grpc._channel._InactiveRpcError:
-        return func
-    else:
-        return cast('Function', protobuf_to_dict(res))
+        return None
+    return cast('Function', protobuf_to_dict(res))
 
 
 def _get_function_by_name(
@@ -113,5 +111,4 @@ def get_function(
         return _get_function_by_id(client, function_id)
     elif folder_id and name:
         return _get_function_by_name(client, folder_id, name)
-    else:
-        return None
+    return None

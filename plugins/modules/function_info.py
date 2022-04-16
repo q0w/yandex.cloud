@@ -123,11 +123,11 @@ def list_function_versions(client, **kwargs):
 
 
 def main():
-    argument_spec = dict(
-        name=dict(type='str'),
-        function_id=dict(type='str'),
-        folder_id=dict(type='str'),
-    )
+    argument_spec = {
+        'name': {'type': 'str'},
+        'function_id': {'type': 'str'},
+        'folder_id': {'type': 'str'},
+    }
     required_one_of = [
         ('function_id', 'name', 'folder_id'),
     ]
