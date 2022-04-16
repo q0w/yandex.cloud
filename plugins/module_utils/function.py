@@ -104,12 +104,8 @@ def _get_function_by_name(
         client,
         folder_id=folder_id,
         filter=f'name="{name}"',
-    )
-    if fs and 'functions' in fs:
-        func = fs['functions'][0]
-    else:
-        func = None
-    return func
+    ).get('functions')
+    return fs[0] if fs else None
 
 
 def get_function(
