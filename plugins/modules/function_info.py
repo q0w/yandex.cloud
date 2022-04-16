@@ -7,16 +7,17 @@ from typing import overload
 from typing import TYPE_CHECKING
 from typing import TypedDict
 
-from ..module_utils._protobuf import protobuf_to_dict
+from google.protobuf.json_format import MessageToDict
+
 from ..module_utils.basic import init_module
 from ..module_utils.basic import init_sdk
 from ..module_utils.basic import log_grpc_error
 from ..module_utils.function import get_function
-from ..module_utils.function import Timestamp
 
 try:
     from yandex.cloud.serverless.functions.v1.function_service_pb2 import (
         ListFunctionsVersionsRequest,
+        GetFunctionVersionRequest,
     )
     from yandex.cloud.serverless.functions.v1.function_service_pb2_grpc import (
         FunctionServiceStub,
@@ -40,9 +41,28 @@ if TYPE_CHECKING:
     class _ByFolderId(ListVersionsParams):
         folder_id: Required[str]
 
+    class FunctionVersion(TypedDict, total=False):
+        id: Required[str]
+        function_id: Required[str]
+        description: NotRequired[str]
+        created_at: Required[str]
+        runtime: Required[str]
+        entrypoint: Required[str]
+        resources: Required[Resources]
+        execution_timeout: Required[str]
+        service_account_id: Required[str]
+        image_size: Required[str]
+        status: Required[str]
+        tags: Required[list[str]]
+        log_group_id: Required[str]
+        environment: NotRequired[Mapping[str, str]]
+        connectivity: NotRequired[Connectivity]
+        named_service_accounts: NotRequired[Mapping[str, str]]
+        secrets: NotRequired[list[Secret]]
+
 
 class Resources(TypedDict):
-    memory: int
+    memory: str
 
 
 class Connectivity(TypedDict, total=False):
@@ -59,26 +79,6 @@ class Secret(TypedDict):
     environment_variable: str
 
 
-class FunctionVersion(TypedDict, total=False):
-    id: str
-    function_id: str
-    description: str
-    created_at: Timestamp
-    runtime: str
-    entrypoint: str
-    resources: Resources
-    execution_timeout: Timestamp
-    service_account_id: str
-    image_size: int
-    status: int
-    tags: list[str]
-    log_group_id: str
-    environment: Mapping[str, str]
-    connectivity: Connectivity
-    named_service_accounts: Mapping[str, str]
-    secrets: list[Secret]
-
-
 # TODO: add 'next_page_token'
 class ListFunctionsVersionsResponse(TypedDict, total=False):
     versions: list[FunctionVersion]
@@ -89,9 +89,14 @@ def get_version(
     function_version_id: str,
 ) -> FunctionVersion:
     return cast(
-        FunctionVersion,
-        protobuf_to_dict(
-            client.GetVersion(function_version_id=function_version_id),
+        'FunctionVersion',
+        MessageToDict(
+            client.GetVersion(
+                GetFunctionVersionRequest(
+                    function_version_id=function_version_id,
+                ),
+            ),
+            preserving_proto_field_name=True,
         ),
     )
 
@@ -116,8 +121,9 @@ def list_function_versions(
 def list_function_versions(client, **kwargs):
     return cast(
         ListFunctionsVersionsResponse,
-        protobuf_to_dict(
+        MessageToDict(
             client.ListVersions(ListFunctionsVersionsRequest(**kwargs)),
+            preserving_proto_field_name=True,
         ),
     )
 

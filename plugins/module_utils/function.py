@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from typing import TypedDict
 
 import grpc
+from google.protobuf.json_format import MessageToDict
 from yandex.cloud.serverless.functions.v1.function_service_pb2 import (
     GetFunctionRequest,
 )
@@ -14,8 +15,6 @@ from yandex.cloud.serverless.functions.v1.function_service_pb2 import (
 from yandex.cloud.serverless.functions.v1.function_service_pb2_grpc import (
     FunctionServiceStub,
 )
-
-from ..module_utils._protobuf import protobuf_to_dict
 
 if TYPE_CHECKING:
     from typing_extensions import NotRequired
@@ -31,29 +30,37 @@ if TYPE_CHECKING:
     class Function(TypedDict, total=False):
         id: Required[str]
         folder_id: Required[str]
-        created_at: Required[Timestamp]
+        created_at: Required[str]
         name: NotRequired[str]
         description: NotRequired[str]
         labels: NotRequired[dict[str, str]]
         log_group_id: Required[str]
         http_invoke_url: Required[str]
-        status: Required[int]
+        status: Required[str]
+
+    _Metadata = TypedDict('_Metadata', {'@type': str})
+
+    class FunctionMetadata(_Metadata):
+        function_id: str
+
+    class FunctionOperationResponse(_Metadata, Function):
+        ...
+
+    # TODO: add 'done', 'result', 'error'
+    class Operation(TypedDict, total=False):
+        id: str
+        description: str
+        created_at: str
+        created_by: str
+        modified_at: str
+        metadata: FunctionMetadata
+        response: NotRequired[FunctionOperationResponse]
 
 
 class GetFunctionParams(TypedDict, total=False):
     folder_id: str
     function_id: str
     name: str
-
-
-class Timestamp(TypedDict, total=False):
-    seconds: int
-    nanos: int
-
-
-class Metadata(TypedDict):
-    type_url: str
-    value: bytes
 
 
 # TODO: add 'next_page_token'
@@ -67,7 +74,10 @@ def list_functions(
 ) -> ListFunctionsResponse:
     return cast(
         ListFunctionsResponse,
-        protobuf_to_dict(client.List(ListFunctionsRequest(**kwargs))),
+        MessageToDict(
+            client.List(ListFunctionsRequest(**kwargs)),
+            preserving_proto_field_name=True,
+        ),
     )
 
 
@@ -79,7 +89,10 @@ def _get_function_by_id(
         res = client.Get(GetFunctionRequest(function_id=function_id))
     except grpc._channel._InactiveRpcError:
         return None
-    return cast('Function', protobuf_to_dict(res))
+    return cast(
+        'Function',
+        MessageToDict(res, preserving_proto_field_name=True),
+    )
 
 
 def _get_function_by_name(

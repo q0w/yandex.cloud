@@ -5,13 +5,10 @@ from typing import Mapping
 from typing import TYPE_CHECKING
 from typing import TypedDict
 
-from ..module_utils._protobuf import protobuf_to_dict
 from ..module_utils.basic import init_module
 from ..module_utils.basic import init_sdk
 from ..module_utils.basic import log_grpc_error
 from ..module_utils.function import get_function
-from ..module_utils.function import Metadata
-from ..module_utils.function import Timestamp
 
 try:
     from yandex.cloud.serverless.functions.v1.function_service_pb2 import (
@@ -22,6 +19,7 @@ try:
     from yandex.cloud.serverless.functions.v1.function_service_pb2_grpc import (
         FunctionServiceStub,
     )
+    from google.protobuf.json_format import MessageToDict
 except ImportError:
     pass
 
@@ -29,6 +27,8 @@ if TYPE_CHECKING:
     from typing_extensions import NotRequired
     from typing_extensions import Required
     from typing_extensions import Unpack
+
+    from ..module_utils.function import Operation
 
     class CreateFunctionParams(TypedDict, total=False):
         folder_id: Required[str]
@@ -44,25 +44,15 @@ if TYPE_CHECKING:
         labels: NotRequired[Mapping[str, str]]
 
 
-# TODO: add 'done', 'result', 'error'
-class Operation(TypedDict, total=False):
-    id: str
-    description: str
-    created_at: Timestamp
-    created_by: str
-    modified_at: Timestamp
-    metadata: Metadata
-    response: Metadata
-
-
 def delete_function(
     client: FunctionServiceStub,
     function_id: str,
 ) -> Operation:
     return cast(
-        Operation,
-        protobuf_to_dict(
+        'Operation',
+        MessageToDict(
             client.Delete(DeleteFunctionRequest(function_id=function_id)),
+            preserving_proto_field_name=True,
         ),
     )
 
@@ -72,8 +62,11 @@ def create_function(
     **kwargs: Unpack[CreateFunctionParams],
 ) -> Operation:
     return cast(
-        Operation,
-        protobuf_to_dict(client.Create(CreateFunctionRequest(**kwargs))),
+        'Operation',
+        MessageToDict(
+            client.Create(CreateFunctionRequest(**kwargs)),
+            preserving_proto_field_name=True,
+        ),
     )
 
 
@@ -82,8 +75,11 @@ def update_function(
     **kwargs: Unpack[UpdateFunctionParams],
 ) -> Operation:
     return cast(
-        Operation,
-        protobuf_to_dict(client.Update(UpdateFunctionRequest(**kwargs))),
+        'Operation',
+        MessageToDict(
+            client.Update(UpdateFunctionRequest(**kwargs)),
+            preserving_proto_field_name=True,
+        ),
     )
 
 
@@ -155,9 +151,6 @@ def main() -> None:
                     description=module.params.get('description'),
                     labels=module.params.get('labels'),
                 )
-            # TODO: Fix decoding bytes for json.dumps
-            resp.pop('metadata')
-            resp.pop('response')
             result['UpdateFunction'] = resp
         else:
             with log_grpc_error(module):

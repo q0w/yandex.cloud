@@ -2,13 +2,7 @@
 max-line-length = 88
 min_python_version = 3.8
 
-[tool.black]
-extend-exclude = '_protobuf.py'
-
 [tool.mypy]
-exclude = [
-    'plugins/module_utils/_protobuf.py'
-]
 allow_redefinition = false
 check_untyped_defs = true
 ignore_errors = false
@@ -25,9 +19,6 @@ warn_unreachable = true
 warn_no_return = true
 
 [tool.pyright]
-exclude = [
-    'plugins/module_utils/_protobuf.py'
-]
 pythonVersion = "3.8"
 #typeCheckingMode = "strict"
 venvPath = "."
