@@ -15,7 +15,7 @@ from yandex.cloud.serverless.functions.v1.function_service_pb2_grpc import (
     FunctionServiceStub,
 )
 
-from ..module_utils.protobuf import protobuf_to_dict
+from ..module_utils._protobuf import protobuf_to_dict
 
 if TYPE_CHECKING:
     from typing_extensions import NotRequired

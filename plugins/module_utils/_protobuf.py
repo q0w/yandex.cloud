@@ -4,20 +4,10 @@ from __future__ import annotations
 
 import datetime
 from typing import Any
-from typing import Callable
-from typing import Generator
-from typing import Iterable
-from typing import Mapping
-from typing import TYPE_CHECKING
 
 from google.protobuf.descriptor import FieldDescriptor
-
-if TYPE_CHECKING:
-    from google.protobuf.message import Message
-    from google.protobuf.timestamp_pb2 import Timestamp
-    from google.protobuf.internal.extension_dict import (
-        _ExtensionFieldDescriptor,
-    )
+from google.protobuf.message import Message
+from google.protobuf.timestamp_pb2 import Timestamp
 
 __all__ = [
     'protobuf_to_dict',
@@ -27,13 +17,13 @@ __all__ = [
 Timestamp_type_name = 'Timestamp'
 
 
-def datetime_to_timestamp(dt: datetime.datetime) -> Timestamp:
+def datetime_to_timestamp(dt):
     ts = Timestamp()
     ts.FromDatetime(dt)
     return ts
 
 
-def timestamp_to_datetime(ts: Timestamp) -> datetime.datetime:
+def timestamp_to_datetime(ts):
     dt = ts.ToDatetime()
     return dt
 
@@ -60,23 +50,17 @@ TYPE_CALLABLE_MAP = {
 }
 
 
-def repeated(
-    type_callable: Callable,
-) -> Callable[[Iterable[Any]], list[Callable]]:
+def repeated(type_callable):
     return lambda value_list: [type_callable(value) for value in value_list]
 
 
-def enum_label_name(
-    field: FieldDescriptor,
-    value: Any,
-    lowercase_enum_lables: bool = False,
-) -> str:
+def enum_label_name(field, value, lowercase_enum_lables=False):
     label = field.enum_type.values_by_number[int(value)].name
     label = label.lower() if lowercase_enum_lables else label
     return label
 
 
-def _is_map_entry(field: FieldDescriptor) -> bool:
+def _is_map_entry(field):
     return (
         field.type == FieldDescriptor.TYPE_MESSAGE
         and field.message_type.has_options
@@ -85,12 +69,12 @@ def _is_map_entry(field: FieldDescriptor) -> bool:
 
 
 def protobuf_to_dict(
-    pb: Message,
-    type_callable_map: Mapping[str, type] | None = None,
-    use_enum_labels: bool = False,
-    including_default_value_fields: bool = False,
-    lowercase_enum_lables: bool = False,
-) -> dict[str, Any]:
+    pb,
+    type_callable_map=None,
+    use_enum_labels=False,
+    including_default_value_fields=False,
+    lowercase_enum_lables=False,
+):
     if type_callable_map is None:
         type_callable_map = TYPE_CALLABLE_MAP
 
@@ -163,12 +147,12 @@ def protobuf_to_dict(
 
 
 def _get_field_value_adaptor(
-    pb: Message,
-    field: FieldDescriptor,
-    type_callable_map: Mapping[str, type] | None = None,
-    use_enum_labels: bool = False,
-    including_default_value_fields: bool = False,
-    lowercase_enum_lables: bool = False,
+    pb,
+    field,
+    type_callable_map=None,
+    use_enum_labels=False,
+    including_default_value_fields=False,
+    lowercase_enum_lables=False,
 ):
     if type_callable_map is None:
         type_callable_map = TYPE_CALLABLE_MAP
@@ -207,10 +191,10 @@ def _get_field_value_adaptor(
 
 def dict_to_protobuf(
     pb_klass_or_instance,
-    values: Mapping[str, Any],
-    type_callable_map: Mapping[str, type] | None = None,
-    strict: bool = True,
-    ignore_none: bool = False,
+    values,
+    type_callable_map=None,
+    strict=True,
+    ignore_none=False,
 ):
     """Populates a protobuf model from a dictionary.
     :param pb_klass_or_instance: a protobuf message class, or an protobuf instance
@@ -240,11 +224,7 @@ def dict_to_protobuf(
     )
 
 
-def _get_field_mapping(
-    pb: Message,
-    dict_value: Mapping[str, Any],
-    strict: bool,
-) -> list[tuple[_ExtensionFieldDescriptor[Message, Any], Any, Any]]:
+def _get_field_mapping(pb, dict_value, strict):
     field_mapping = []
     for key, value in dict_value.items():
         if key == EXTENSION_CONTAINER:
@@ -264,14 +244,14 @@ def _get_field_mapping(
             ext_num = int(ext_num)
         except ValueError:
             raise ValueError('Extension keys must be integers.')
-        if ext_num not in pb._extensions_by_number:  # type: ignore
+        if ext_num not in pb._extensions_by_number:
             if strict:
                 raise KeyError(
                     f'{pb} does not have a extension with number {key}.'
                     f' Perhaps you forgot to import it?',
                 )
             continue
-        ext_field = pb._extensions_by_number[ext_num]  # type: ignore
+        ext_field = pb._extensions_by_number[ext_num]
         pb_val = None
         pb_val = pb.Extensions[ext_field]
         field_mapping.append((ext_field, ext_val, pb_val))
@@ -279,13 +259,7 @@ def _get_field_mapping(
     return field_mapping
 
 
-def _dict_to_protobuf(
-    pb: Message,
-    value: Mapping[str, Any],
-    type_callable_map: Mapping[str, type],
-    strict: bool,
-    ignore_none: bool,
-) -> Message:
+def _dict_to_protobuf(pb, value, type_callable_map, strict, ignore_none):
     fields = _get_field_mapping(pb, value, strict)
 
     for field, input_value, pb_value in fields:
@@ -310,7 +284,7 @@ def _dict_to_protobuf(
                         )
                     else:
                         if ignore_none and value is None:
-                            continue  # type: ignore
+                            continue
                         try:
                             if key_field.type in type_callable_map:
                                 key = type_callable_map[key_field.type](key)
@@ -385,11 +359,7 @@ def _dict_to_protobuf(
     return pb
 
 
-def _string_to_enum(
-    field: FieldDescriptor,
-    input_value: Any,
-    strict: bool = False,
-):
+def _string_to_enum(field, input_value, strict=False):
     try:
         input_value = field.enum_type.values_by_name[input_value].number
     except KeyError:
@@ -405,9 +375,7 @@ def _string_to_enum(
     return input_value
 
 
-def get_field_names_and_options(
-    pb: Message,
-) -> Generator[tuple[Any, Any, dict[Any, Any]], None, None]:
+def get_field_names_and_options(pb):
     """
     Return a tuple of field names and options.
     """
@@ -427,7 +395,7 @@ class FieldsMissing(ValueError):
     pass
 
 
-def validate_dict_for_required_pb_fields(pb: Message, dic):
+def validate_dict_for_required_pb_fields(pb, dic):
     """
     Validate that the dictionary has all the required fields
     for creating a protobuffer object from pb class.

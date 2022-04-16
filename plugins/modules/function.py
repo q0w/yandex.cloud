@@ -5,13 +5,13 @@ from typing import Mapping
 from typing import TYPE_CHECKING
 from typing import TypedDict
 
+from ..module_utils._protobuf import protobuf_to_dict
 from ..module_utils.basic import init_module
 from ..module_utils.basic import init_sdk
 from ..module_utils.basic import log_grpc_error
 from ..module_utils.function import get_function
 from ..module_utils.function import Metadata
 from ..module_utils.function import Timestamp
-from ..module_utils.protobuf import protobuf_to_dict
 
 try:
     from yandex.cloud.serverless.functions.v1.function_service_pb2 import (

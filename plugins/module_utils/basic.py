@@ -56,15 +56,14 @@ def _get_auth_settings(
         sa_content = module.params.get('sa_content')
         if sa_path:
             with open(sa_path) as f:
-                sa_key = json.load(f)
+                config['service_account_key'] = json.load(f)
         elif sa_content:
-            sa_key = json.loads(sa_content)
+            config['service_account_key'] = json.loads(sa_content)
         else:
             module.fail_json(
                 "Either 'sa_path' or 'sa_content' must be set"
                 " when 'auth_kind' is set to 'sa_file'",
             )
-        config['service_account_key'] = sa_key
 
     return config
 
