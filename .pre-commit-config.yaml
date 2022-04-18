@@ -15,7 +15,7 @@ repos:
     -   id: reorder-python-imports
         args: [--py38-plus, --add-import, 'from __future__ import annotations']
 -   repo: https://github.com/asottile/add-trailing-comma
-    rev: v2.2.2
+    rev: v2.2.3
     hooks:
     -   id: add-trailing-comma
         args: [--py36-plus]
@@ -43,6 +43,6 @@ repos:
     -   id: mypy
         additional_dependencies: [types-protobuf]
 -  repo: https://github.com/RobertCraigie/pyright-python
-   rev: 2fcca38566b3e5c3a1f5cfda72e02cd6b6e17456
+   rev: v1.1.238
    hooks:
    -  id: pyright
