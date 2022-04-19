@@ -87,7 +87,7 @@ def _get_function_by_id(
 ) -> Function | None:
     try:
         res = client.Get(GetFunctionRequest(function_id=function_id))
-    except grpc._channel._InactiveRpcError:
+    except grpc.RpcError:
         return None
     return cast(
         'Function',

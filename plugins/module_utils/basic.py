@@ -82,7 +82,7 @@ def init_sdk(module: AnsibleModule) -> yandexcloud.SDK:
 def log_grpc_error(module: AnsibleModule) -> Generator[None, None, None]:
     try:
         yield
-    except grpc._channel._InactiveRpcError as e:
+    except grpc.RpcError as e:
         (state,) = e.args
         module.fail_json(msg=state.details)
 
