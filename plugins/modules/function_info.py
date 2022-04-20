@@ -189,6 +189,13 @@ def get_details(client, query, **kwargs):
         )
     elif query == 'policy':
         result['ListScalingPolicies'] = list_scaling_policies(client, **kwargs)
+
+    elif query == 'all':
+        result['ListScalingPolicies'] = list_scaling_policies(client, **kwargs)
+        result['ListFunctionsVersions'] = list_function_versions(
+            client,
+            **kwargs,
+        )
     return result
 
 
@@ -212,6 +219,8 @@ def main():
     }
     required_if = [
         ('query', 'policy', ('function_id', 'name'), True),
+        ('query', 'all', ('function_id', 'name'), True),
+        ('query', 'versions', ('function_id', 'name', 'folder_id'), True),
     ]
     module = init_module(
         argument_spec=argument_spec,
