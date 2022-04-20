@@ -37,6 +37,10 @@ if TYPE_CHECKING:
         page_token: NotRequired[str]
         filter: NotRequired[str]
 
+    # TODO: add 'next_page_token'
+    class ListFunctionsVersionsResponse(TypedDict, total=False):
+        versions: list[FunctionVersion]
+
     class ListScalingPoliciesParams(TypedDict, total=False):
         function_id: Required[str]
         page_size: NotRequired[int]
@@ -86,11 +90,6 @@ class Secret(TypedDict):
     environment_variable: str
 
 
-# TODO: add 'next_page_token'
-class ListFunctionsVersionsResponse(TypedDict, total=False):
-    versions: list[FunctionVersion]
-
-
 # TODO: add 'next_page_token: str'
 class ListScalingPoliciesResponse(TypedDict, total=False):
     scaling_policies: list[ScalingPolicy]
@@ -132,7 +131,7 @@ def list_function_versions(
 # TODO: add page_size, page_token, filter
 def list_function_versions(client, **kwargs):
     return cast(
-        ListFunctionsVersionsResponse,
+        'ListFunctionsVersionsResponse',
         MessageToDict(
             client.ListVersions(ListFunctionsVersionsRequest(**kwargs)),
             preserving_proto_field_name=True,
