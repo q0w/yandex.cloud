@@ -29,6 +29,8 @@ if TYPE_CHECKING:
     from typing_extensions import Unpack
 
     from ..module_utils.function import Operation
+    from ..module_utils.function import _Metadata
+    from ..module_utils.function import Function
 
     class CreateFunctionParams(TypedDict, total=False):
         folder_id: Required[str]
@@ -43,13 +45,19 @@ if TYPE_CHECKING:
         description: NotRequired[str]
         labels: NotRequired[Mapping[str, str]]
 
+    class FunctionOperationResponse(_Metadata, Function):
+        ...
+
+    class FunctionOperation(Operation):
+        response: NotRequired[FunctionOperationResponse]
+
 
 def delete_function(
     client: FunctionServiceStub,
     function_id: str,
-) -> Operation:
+) -> FunctionOperation:
     return cast(
-        'Operation',
+        'FunctionOperation',
         MessageToDict(
             client.Delete(DeleteFunctionRequest(function_id=function_id)),
             preserving_proto_field_name=True,
@@ -60,9 +68,9 @@ def delete_function(
 def create_function(
     client: FunctionServiceStub,
     **kwargs: Unpack[CreateFunctionParams],
-) -> Operation:
+) -> FunctionOperation:
     return cast(
-        'Operation',
+        'FunctionOperation',
         MessageToDict(
             client.Create(CreateFunctionRequest(**kwargs)),
             preserving_proto_field_name=True,
@@ -73,9 +81,9 @@ def create_function(
 def update_function(
     client: FunctionServiceStub,
     **kwargs: Unpack[UpdateFunctionParams],
-) -> Operation:
+) -> FunctionOperation:
     return cast(
-        'Operation',
+        'FunctionOperation',
         MessageToDict(
             client.Update(UpdateFunctionRequest(**kwargs)),
             preserving_proto_field_name=True,

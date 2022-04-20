@@ -38,23 +38,29 @@ if TYPE_CHECKING:
         http_invoke_url: Required[str]
         status: Required[str]
 
+    class ScalingPolicy(TypedDict, total=False):
+        function_id: Required[str]
+        tag: Required[str]
+        created_at: NotRequired[str]
+        modified_at: NotRequired[str]
+        provisioned_instances_count: NotRequired[str]
+        zone_instances_limit: NotRequired[str]
+        zone_requests_limit: NotRequired[str]
+
     _Metadata = TypedDict('_Metadata', {'@type': str})
 
     class FunctionMetadata(_Metadata):
         function_id: str
 
-    class FunctionOperationResponse(_Metadata, Function):
-        ...
-
     # TODO: add 'done', 'result', 'error'
     class Operation(TypedDict, total=False):
         id: str
-        description: str
-        created_at: str
-        created_by: str
-        modified_at: str
-        metadata: FunctionMetadata
-        response: NotRequired[FunctionOperationResponse]
+        description: NotRequired[str]
+        created_at: Required[str]
+        created_by: Required[str]
+        modified_at: Required[str]
+        done: NotRequired[bool]
+        metadata: Required[FunctionMetadata]
 
 
 class GetFunctionParams(TypedDict, total=False):
