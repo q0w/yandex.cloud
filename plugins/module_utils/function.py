@@ -53,7 +53,7 @@ if TYPE_CHECKING:
         function_id: str
 
     # TODO: add 'done', 'result', 'error'
-    class Operation(TypedDict, total=False):
+    class _Operation(TypedDict, total=False):
         id: str
         description: NotRequired[str]
         created_at: Required[str]

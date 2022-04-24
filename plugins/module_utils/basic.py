@@ -68,6 +68,23 @@ def _get_auth_settings(
     return config
 
 
+def get_base_arg_spec() -> dict[str, Any]:
+    return {
+        'auth_kind': {
+            'type': 'str',
+            'choices': ['oauth', 'sa_file'],
+            'required': True,
+        },
+        'oauth_token': {'type': 'str'},
+        'sa_path': {'type': 'str'},
+        'sa_content': {'type': 'str'},
+    }
+
+
+def get_base_required_if() -> list[tuple[str, str, tuple[str, ...], bool]]:
+    return [('auth_kind', 'sa_file', ('sa_path', 'sa_content'), True)]
+
+
 def init_sdk(module: AnsibleModule) -> yandexcloud.SDK:
     return yandexcloud.SDK(
         interceptor=yandexcloud.RetryInterceptor(
@@ -78,34 +95,7 @@ def init_sdk(module: AnsibleModule) -> yandexcloud.SDK:
     )
 
 
-@contextlib.contextmanager
-def log_grpc_error(module: AnsibleModule) -> Generator[None, None, None]:
-    try:
-        yield
-    except grpc.RpcError as e:
-        (state,) = e.args
-        module.fail_json(msg=state.details)
-
-
 def init_module(**params: Unpack[ModuleParams]) -> AnsibleModule:
-    params['argument_spec'].update(
-        {
-            'auth_kind': {
-                'type': 'str',
-                'choices': ['oauth', 'sa_file'],
-                'required': True,
-            },
-            'oauth_token': {'type': 'str'},
-            'sa_path': {'type': 'str'},
-            'sa_content': {'type': 'str'},
-        },
-    )
-    required_if = params.get('required_if') or []
-    required_if.append(
-        ('auth_kind', 'sa_file', ('sa_path', 'sa_content'), True),
-    )
-    params['required_if'] = required_if
-
     module = AnsibleModule(**params)
     if not HAS_YANDEX:
         module.fail_json(
@@ -113,3 +103,12 @@ def init_module(**params: Unpack[ModuleParams]) -> AnsibleModule:
             exception=YANDEX_ERR,
         )
     return module
+
+
+@contextlib.contextmanager
+def log_grpc_error(module: AnsibleModule) -> Generator[None, None, None]:
+    try:
+        yield
+    except grpc.RpcError as e:
+        (state,) = e.args
+        module.fail_json(msg=state.details)

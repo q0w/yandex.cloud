@@ -5,6 +5,8 @@ from typing import Mapping
 from typing import TYPE_CHECKING
 from typing import TypedDict
 
+from ..module_utils.basic import get_base_arg_spec
+from ..module_utils.basic import get_base_required_if
 from ..module_utils.basic import init_module
 from ..module_utils.basic import init_sdk
 from ..module_utils.basic import log_grpc_error
@@ -28,7 +30,7 @@ if TYPE_CHECKING:
     from typing_extensions import Required
     from typing_extensions import Unpack
 
-    from ..module_utils.function import Operation
+    from ..module_utils.function import _Operation
     from ..module_utils.function import _Metadata
     from ..module_utils.function import Function
 
@@ -48,7 +50,7 @@ if TYPE_CHECKING:
     class FunctionOperationResponse(_Metadata, Function):
         ...
 
-    class FunctionOperation(Operation):
+    class FunctionOperation(_Operation):
         response: NotRequired[FunctionOperationResponse]
 
 
@@ -97,29 +99,29 @@ def update_function(
 # TODO: RemoveTag
 # TODO: ListTagHistory
 # TODO: CreateVersion
-# TODO: ListRuntimes
 # TODO: ListOperations
 # TODO: ListAccessBindings
 # TODO: SetAccessBindings
 # TODO: UpdateAccessBindings
-# TODO: ListScalingPolicies
-# TODO: SetScalingPolicy
-# TODO: RemoveScalingPolicy
 def main() -> None:
     # TODO: NoReturn
     # TODO: manipulate "changed" state after success
     # TODO: check_mode
-    argument_spec = {
-        'name': {'type': 'str'},
-        'function_id': {'type': 'str'},
-        'folder_id': {'type': 'str'},
-        'description': {'type': 'str'},
-        'state': {
-            'type': 'str',
-            'default': 'present',
-            'choices': ['present', 'absent'],
+    argument_spec = get_base_arg_spec()
+    required_if = get_base_required_if()
+    argument_spec.update(
+        {
+            'name': {'type': 'str'},
+            'function_id': {'type': 'str'},
+            'folder_id': {'type': 'str'},
+            'description': {'type': 'str'},
+            'state': {
+                'type': 'str',
+                'default': 'present',
+                'choices': ['present', 'absent'],
+            },
         },
-    }
+    )
     required_one_of = [
         ('function_id', 'name'),
     ]
@@ -129,6 +131,7 @@ def main() -> None:
 
     module = init_module(
         argument_spec=argument_spec,
+        required_if=required_if,
         required_one_of=required_one_of,
         required_together=required_together,
     )
