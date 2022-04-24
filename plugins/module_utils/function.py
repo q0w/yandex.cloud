@@ -19,13 +19,6 @@ from yandex.cloud.serverless.functions.v1.function_service_pb2_grpc import (
 if TYPE_CHECKING:
     from typing_extensions import NotRequired
     from typing_extensions import Required
-    from typing_extensions import Unpack
-
-    class ListFunctionParams(TypedDict, total=False):
-        folder_id: Required[str]
-        page_size: NotRequired[int]
-        page_token: NotRequired[str]
-        filter: NotRequired[str]
 
     class Function(TypedDict, total=False):
         id: Required[str]
@@ -63,31 +56,36 @@ if TYPE_CHECKING:
         metadata: Required[FunctionMetadata]
 
 
-class GetFunctionParams(TypedDict, total=False):
-    folder_id: str
-    function_id: str
-    name: str
-
-
-# TODO: add 'next_page_token'
 class ListFunctionsResponse(TypedDict, total=False):
     functions: list[Function]
+    next_page_token: str
 
 
 def list_functions(
     client: FunctionServiceStub,
-    **kwargs: Unpack[ListFunctionParams],
+    *,
+    folder_id: str,
+    page_size: int | None = None,
+    page_token: str | None = None,
+    filter: str | None = None,
 ) -> ListFunctionsResponse:
     return cast(
         ListFunctionsResponse,
         MessageToDict(
-            client.List(ListFunctionsRequest(**kwargs)),
+            client.List(
+                ListFunctionsRequest(
+                    folder_id=folder_id,
+                    page_size=page_size,
+                    page_token=page_token,
+                    filter=filter,
+                ),
+            ),
             preserving_proto_field_name=True,
         ),
     )
 
 
-def _get_function_by_id(
+def get_function_by_id(
     client: FunctionServiceStub,
     function_id: str,
 ) -> Function | None:
@@ -101,7 +99,7 @@ def _get_function_by_id(
     )
 
 
-def _get_function_by_name(
+def get_function_by_name(
     client: FunctionServiceStub,
     folder_id: str,
     name: str,
@@ -112,18 +110,3 @@ def _get_function_by_name(
         filter=f'name="{name}"',
     ).get('functions')
     return fs[0] if fs else None
-
-
-def get_function(
-    client: FunctionServiceStub,
-    **kwargs: Unpack[GetFunctionParams],
-) -> Function | None:
-    function_id = kwargs.get('function_id')
-    folder_id = kwargs.get('folder_id')
-    name = kwargs.get('name')
-
-    if function_id:
-        return _get_function_by_id(client, function_id)
-    elif folder_id and name:
-        return _get_function_by_name(client, folder_id, name)
-    return None

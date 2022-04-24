@@ -2,6 +2,9 @@
 max-line-length = 88
 min_python_version = 3.8
 
+[tool.blue]
+line-length = 88
+
 [tool.mypy]
 allow_redefinition = false
 check_untyped_defs = true

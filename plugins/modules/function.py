@@ -1,16 +1,15 @@
 from __future__ import annotations
 
-from typing import cast
+from typing import Any
 from typing import Mapping
-from typing import TYPE_CHECKING
-from typing import TypedDict
 
 from ..module_utils.basic import get_base_arg_spec
 from ..module_utils.basic import get_base_required_if
 from ..module_utils.basic import init_module
 from ..module_utils.basic import init_sdk
 from ..module_utils.basic import log_grpc_error
-from ..module_utils.function import get_function
+from ..module_utils.function import get_function_by_id
+from ..module_utils.function import get_function_by_name
 
 try:
     from yandex.cloud.serverless.functions.v1.function_service_pb2 import (
@@ -25,72 +24,64 @@ try:
 except ImportError:
     pass
 
-if TYPE_CHECKING:
-    from typing_extensions import NotRequired
-    from typing_extensions import Required
-    from typing_extensions import Unpack
-
-    from ..module_utils.function import _Operation
-    from ..module_utils.function import _Metadata
-    from ..module_utils.function import Function
-
-    class CreateFunctionParams(TypedDict, total=False):
-        folder_id: Required[str]
-        name: NotRequired[str]
-        description: NotRequired[str]
-        labels: NotRequired[Mapping[str, str]]
-
-    class UpdateFunctionParams(TypedDict, total=False):
-        function_id: Required[str]
-        # TODO: update_mask
-        name: NotRequired[str]
-        description: NotRequired[str]
-        labels: NotRequired[Mapping[str, str]]
-
-    class FunctionOperationResponse(_Metadata, Function):
-        ...
-
-    class FunctionOperation(_Operation):
-        response: NotRequired[FunctionOperationResponse]
-
 
 def delete_function(
     client: FunctionServiceStub,
     function_id: str,
-) -> FunctionOperation:
-    return cast(
-        'FunctionOperation',
-        MessageToDict(
+) -> dict[str, dict[str, Any]]:
+    return {
+        'DeleteFunction': MessageToDict(
             client.Delete(DeleteFunctionRequest(function_id=function_id)),
             preserving_proto_field_name=True,
         ),
-    )
+    }
 
 
 def create_function(
     client: FunctionServiceStub,
-    **kwargs: Unpack[CreateFunctionParams],
-) -> FunctionOperation:
-    return cast(
-        'FunctionOperation',
-        MessageToDict(
-            client.Create(CreateFunctionRequest(**kwargs)),
+    *,
+    folder_id: str,
+    name: str | None = None,
+    description: str | None = None,
+    labels: Mapping[str, str] | None = None,
+) -> dict[str, dict[str, Any]]:
+    return {
+        'CreateFunction': MessageToDict(
+            client.Create(
+                CreateFunctionRequest(
+                    folder_id=folder_id,
+                    name=name,
+                    description=description,
+                    labels=labels,
+                ),
+            ),
             preserving_proto_field_name=True,
         ),
-    )
+    }
 
 
+# TODO: add update_mask
 def update_function(
     client: FunctionServiceStub,
-    **kwargs: Unpack[UpdateFunctionParams],
-) -> FunctionOperation:
-    return cast(
-        'FunctionOperation',
-        MessageToDict(
-            client.Update(UpdateFunctionRequest(**kwargs)),
+    *,
+    function_id: str,
+    name: str | None = None,
+    description: str | None = None,
+    labels: Mapping[str, str] | None = None,
+) -> dict[str, dict[str, Any]]:
+    return {
+        'UpdateFunction': MessageToDict(
+            client.Update(
+                UpdateFunctionRequest(
+                    function_id=function_id,
+                    name=name,
+                    description=description,
+                    labels=labels,
+                ),
+            ),
             preserving_proto_field_name=True,
         ),
-    )
+    }
 
 
 # TODO: GetVersion
@@ -99,8 +90,6 @@ def update_function(
 # TODO: RemoveTag
 # TODO: ListTagHistory
 # TODO: CreateVersion
-# TODO: ListOperations
-# TODO: ListAccessBindings
 # TODO: SetAccessBindings
 # TODO: UpdateAccessBindings
 def main() -> None:
@@ -143,9 +132,11 @@ def main() -> None:
     folder_id = module.params.get('folder_id')
     name = module.params.get('name')
     with log_grpc_error(module):
-        curr_function = get_function(
+        curr_function = get_function_by_id(
             function_service,
             function_id=function_id,
+        ) or get_function_by_name(
+            function_service,
             folder_id=folder_id,
             name=name,
         )
@@ -162,21 +153,22 @@ def main() -> None:
                     description=module.params.get('description'),
                     labels=module.params.get('labels'),
                 )
-            result['UpdateFunction'] = resp
         else:
             with log_grpc_error(module):
-                result['CreateFunction'] = create_function(
+                resp = create_function(
                     function_service,
                     folder_id=module.params.get('folder_id'),
                     name=module.params.get('name'),
                 )
+        result.update(resp)
 
     elif module.params.get('state') == 'absent' and curr_function is not None:
         with log_grpc_error(module):
-            result['DeleteFunction'] = delete_function(
+            resp = delete_function(
                 function_service,
                 curr_function.get('id') or module.params.get('function_id'),
             )
+        result.update(resp)
 
     module.exit_json(**result)
 
