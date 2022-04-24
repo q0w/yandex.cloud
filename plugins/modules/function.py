@@ -84,18 +84,11 @@ def update_function(
     }
 
 
-# TODO: GetVersion
-# TODO: GetVersionByTag
-# TODO: SetTag
-# TODO: RemoveTag
-# TODO: ListTagHistory
-# TODO: CreateVersion
-# TODO: SetAccessBindings
-# TODO: UpdateAccessBindings
 def main() -> None:
     # TODO: NoReturn
     # TODO: manipulate "changed" state after success
     # TODO: check_mode
+    # TODO: add arg_spec labels, update_mask
     argument_spec = get_base_arg_spec()
     required_if = get_base_required_if()
     argument_spec.update(
