@@ -1,30 +1,33 @@
 from __future__ import annotations
 
-from typing import Any
-from typing import Callable
-from typing import Generator
+from typing import Any, Callable, Generator
 
-from ..module_utils.basic import get_base_arg_spec
-from ..module_utils.basic import get_base_required_if
-from ..module_utils.basic import init_module
-from ..module_utils.basic import init_sdk
-from ..module_utils.basic import log_grpc_error
-from ..module_utils.function import get_function_by_name
+from ..module_utils.basic import (
+    get_base_arg_spec,
+    get_base_required_if,
+    init_module,
+    init_sdk,
+    log_grpc_error,
+)
+from ..module_utils.function import (
+    get_function_by_name,
+    list_function_versions_by_folder,
+    list_function_versions_by_function,
+)
 
 try:
+    from google.protobuf.json_format import MessageToDict
+    from yandex.cloud.access.access_pb2 import ListAccessBindingsRequest
     from yandex.cloud.serverless.functions.v1.function_service_pb2 import (
-        ListFunctionsVersionsRequest,
-        ListScalingPoliciesRequest,
-        ListFunctionTagHistoryRequest,
-        ListRuntimesRequest,
         GetFunctionVersionRequest,
         ListFunctionOperationsRequest,
+        ListFunctionTagHistoryRequest,
+        ListRuntimesRequest,
+        ListScalingPoliciesRequest,
     )
-    from yandex.cloud.access.access_pb2 import ListAccessBindingsRequest
     from yandex.cloud.serverless.functions.v1.function_service_pb2_grpc import (
         FunctionServiceStub,
     )
-    from google.protobuf.json_format import MessageToDict
 except ImportError:
     pass
 
@@ -41,52 +44,6 @@ def get_version(
         ),
         preserving_proto_field_name=True,
     )
-
-
-def list_function_versions_by_folder(
-    client: FunctionServiceStub,
-    *,
-    folder_id: str,
-    page_size: int | None = None,
-    page_token: str | None = None,
-    filter: str | None = None,
-) -> dict[str, dict[str, Any]]:
-    return {
-        'ListFunctionsVersions': MessageToDict(
-            client.ListVersions(
-                ListFunctionsVersionsRequest(
-                    folder_id=folder_id,
-                    page_size=page_size,
-                    page_token=page_token,
-                    filter=filter,
-                ),
-            ),
-            preserving_proto_field_name=True,
-        ),
-    }
-
-
-def list_function_versions_by_function(
-    client: FunctionServiceStub,
-    *,
-    function_id: str,
-    page_size: int | None = None,
-    page_token: str | None = None,
-    filter: str | None = None,
-) -> dict[str, dict[str, Any]]:
-    return {
-        'ListFunctionsVersions': MessageToDict(
-            client.ListVersions(
-                ListFunctionsVersionsRequest(
-                    function_id=function_id,
-                    page_size=page_size,
-                    page_token=page_token,
-                    filter=filter,
-                ),
-            ),
-            preserving_proto_field_name=True,
-        ),
-    }
 
 
 # TODO: check page_size, page_token
@@ -255,7 +212,9 @@ def main():
     query = module.params.get('query')
 
     callables_by_function: dict[str, Callable[..., dict[str, dict[str, Any]]]] = {
-        'versions': list_function_versions_by_function,
+        'versions': lambda c, **kwargs: {
+            'ListFunctionsVersions': list_function_versions_by_function(c, **kwargs),
+        },
         'policy': list_scaling_policies,
         'tags': list_tag_history,
         'access_bindings': list_access_bindings,
@@ -264,7 +223,9 @@ def main():
     }
 
     callables_by_folder: dict[str, Callable[..., dict[str, dict[str, Any]]]] = {
-        'versions': list_function_versions_by_folder,
+        'versions': lambda c, **kwargs: {
+            'ListFunctionsVersions': list_function_versions_by_folder(c, **kwargs),
+        },
         'runtimes': lambda c, **kwargs: list_runtimes(c),
     }
 
@@ -275,7 +236,7 @@ def main():
 
     elif name and folder_id:
         # FIXME: somehow filter by name does not work
-        # FIXME: workaround: filter functions by name using ListFunctions
+        # FIXME: workaround: filter functions by name using ListVersions
         with log_grpc_error(module):
             curr_function = get_function_by_name(
                 function_service,

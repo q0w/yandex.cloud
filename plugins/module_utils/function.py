@@ -1,24 +1,20 @@
 from __future__ import annotations
 
-from typing import cast
-from typing import TYPE_CHECKING
-from typing import TypedDict
+from typing import TYPE_CHECKING, Any, TypedDict, cast
 
 import grpc
 from google.protobuf.json_format import MessageToDict
 from yandex.cloud.serverless.functions.v1.function_service_pb2 import (
     GetFunctionRequest,
-)
-from yandex.cloud.serverless.functions.v1.function_service_pb2 import (
     ListFunctionsRequest,
+    ListFunctionsVersionsRequest,
 )
 from yandex.cloud.serverless.functions.v1.function_service_pb2_grpc import (
     FunctionServiceStub,
 )
 
 if TYPE_CHECKING:
-    from typing_extensions import NotRequired
-    from typing_extensions import Required
+    from typing_extensions import NotRequired, Required
 
     class Function(TypedDict, total=False):
         id: Required[str]
@@ -110,3 +106,47 @@ def get_function_by_name(
         filter=f'name="{name}"',
     ).get('functions')
     return fs[0] if fs else None
+
+
+# TODO: page_size, page_token, filter
+def list_function_versions_by_function(
+    client: FunctionServiceStub,
+    *,
+    function_id: str,
+    page_size: int | None = None,
+    page_token: str | None = None,
+    filter: str | None = None,
+) -> dict[str, Any]:
+    return MessageToDict(
+        client.ListVersions(
+            ListFunctionsVersionsRequest(
+                function_id=function_id,
+                page_size=page_size,
+                page_token=page_token,
+                filter=filter,
+            ),
+        ),
+        preserving_proto_field_name=True,
+    )
+
+
+# TODO: page_size, page_token
+def list_function_versions_by_folder(
+    client: FunctionServiceStub,
+    *,
+    folder_id: str,
+    page_size: int | None = None,
+    page_token: str | None = None,
+    filter: str | None = None,
+) -> dict[str, Any]:
+    return MessageToDict(
+        client.ListVersions(
+            ListFunctionsVersionsRequest(
+                folder_id=folder_id,
+                page_size=page_size,
+                page_token=page_token,
+                filter=filter,
+            ),
+        ),
+        preserving_proto_field_name=True,
+    )

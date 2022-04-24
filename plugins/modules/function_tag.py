@@ -1,3 +1,5 @@
+# TODO: SetTag
+# TODO: RemoveTag
 from __future__ import annotations
 
 from typing import Any
@@ -11,12 +13,15 @@ from ..module_utils.basic import (
     init_sdk,
     log_grpc_error,
 )
-from ..module_utils.function import get_function_by_name
+from ..module_utils.function import (
+    get_function_by_name,
+    list_function_versions_by_function,
+)
 
 try:
     from yandex.cloud.serverless.functions.v1.function_service_pb2 import (
-        RemoveScalingPolicyRequest,
-        SetScalingPolicyRequest,
+        RemoveFunctionTagRequest,
+        SetFunctionTagRequest,
     )
     from yandex.cloud.serverless.functions.v1.function_service_pb2_grpc import (
         FunctionServiceStub,
@@ -25,24 +30,18 @@ except ImportError:
     pass
 
 
-def set_scaling_policy(
+def set_tag(
     client: FunctionServiceStub,
     *,
-    function_id: str,
+    function_version_id: str,
     tag: str,
-    provisioned_instances_count: int | None = None,
-    zone_instances_limit: int | None = None,
-    zone_requests_limit: int | None = None,
 ) -> dict[str, dict[str, Any]]:
     return {
-        'SetScalingPolicy': MessageToDict(
-            client.SetScalingPolicy(
-                SetScalingPolicyRequest(
-                    function_id=function_id,
+        'SetFunctionTag': MessageToDict(
+            client.SetTag(
+                SetFunctionTagRequest(
+                    function_version_id=function_version_id,
                     tag=tag,
-                    provisioned_instances_count=provisioned_instances_count,
-                    zone_instances_limit=zone_instances_limit,
-                    zone_requests_limit=zone_requests_limit,
                 ),
             ),
             preserving_proto_field_name=True,
@@ -50,17 +49,17 @@ def set_scaling_policy(
     }
 
 
-def remove_scaling_policy(
+def remove_tag(
     client: FunctionServiceStub,
     *,
-    function_id: str,
+    function_version_id: str,
     tag: str,
 ) -> dict[str, dict[str, Any]]:
     return {
-        'RemoveScalingPolicy': MessageToDict(
-            client.RemoveScalingPolicy(
-                RemoveScalingPolicyRequest(
-                    function_id=function_id,
+        'RemoveFunctionTag': MessageToDict(
+            client.RemoveTag(
+                RemoveFunctionTagRequest(
+                    function_version_id=function_version_id,
                     tag=tag,
                 ),
             ),
@@ -77,10 +76,8 @@ def main():
             'name': {'type': 'str'},
             'function_id': {'type': 'str'},
             'folder_id': {'type': 'str'},
+            'function_version_id': {'type': 'str'},
             'tag': {'type': 'str', 'required': True},
-            'provisioned_instances_count': {'type': 'int'},
-            'zone_instances_limit': {'type': 'int'},
-            'zone_requests_limit': {'type': 'int'},
             'state': {
                 'type': 'str',
                 'default': 'present',
@@ -90,7 +87,7 @@ def main():
     )
 
     required_one_of = [
-        ('function_id', 'name'),
+        ('function_version_id', 'function_id', 'name'),
     ]
     required_by = {
         'name': 'folder_id',
@@ -106,45 +103,56 @@ def main():
     function_service = sdk.client(FunctionServiceStub)
 
     result: dict[str, Any] = {}
+    state = module.params.get('state')
     function_id = module.params.get('function_id')
     folder_id = module.params.get('folder_id')
     name = module.params.get('name')
     tag = module.params.get('tag')
-    provisioned_instances_count = module.params.get('provisioned_instances_count')
-    zone_instances_limit = module.params.get('zone_instances_limit')
-    zone_requests_limit = module.params.get('zone_requests_limit')
+    function_version_id = module.params.get('function_version_id')
 
-    if not function_id and folder_id and name:
-        with log_grpc_error(module):
-            curr_function = get_function_by_name(
+    if not function_version_id:
+        if function_id:
+            versions = list_function_versions_by_function(
                 function_service,
-                folder_id=folder_id,
-                name=name,
-            )
-        if not curr_function:
-            module.fail_json(msg=f'function {name} not found')
-            # FIXME: add stubs
-            raise AssertionError('unreachable')
-        function_id = curr_function.get('id')
-
-    if module.params.get('state') == 'present':
-        with log_grpc_error(module):
-            result.update(
-                set_scaling_policy(
+                function_id=function_id,
+            ).get('versions', [])
+        else:
+            # FIXME: Use filter by Function.name in ListVersions
+            with log_grpc_error(module):
+                curr_function = get_function_by_name(
+                    function_service,
+                    folder_id=folder_id,
+                    name=name,
+                )
+            if not curr_function:
+                module.fail_json(msg=f'function {name} not found')
+                # FIXME: add stubs
+                raise AssertionError('unreachable')
+            function_id = curr_function.get('id')
+            with log_grpc_error(module):
+                versions = list_function_versions_by_function(
                     function_service,
                     function_id=function_id,
+                ).get('versions', [])
+        if not versions:
+            module.fail_json(msg=f'no versions for function {name}')
+        function_version_id = versions[0].get('id')
+
+    if state == 'present':
+        with log_grpc_error(module):
+            result.update(
+                set_tag(
+                    function_service,
+                    function_version_id=function_version_id,
                     tag=tag,
-                    provisioned_instances_count=provisioned_instances_count,
-                    zone_instances_limit=zone_instances_limit,
-                    zone_requests_limit=zone_requests_limit,
                 ),
             )
-    elif module.params.get('state') == 'absent':
+    elif state == 'absent':
         with log_grpc_error(module):
             result.update(
-                remove_scaling_policy(
+                remove_tag(
                     function_service,
-                    function_id=function_id,
+                    function_version_id=function_version_id,
                     tag=tag,
                 ),
             )

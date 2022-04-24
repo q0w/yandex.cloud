@@ -3,16 +3,17 @@ from __future__ import annotations
 import contextlib
 import json
 import traceback
-from typing import Any
-from typing import Generator
-from typing import Iterable
-from typing import Mapping
-from typing import MutableMapping
-from typing import TYPE_CHECKING
-from typing import TypedDict
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Generator,
+    Iterable,
+    Mapping,
+    MutableMapping,
+    TypedDict,
+)
 
-from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.basic import missing_required_lib
+from ansible.module_utils.basic import AnsibleModule, missing_required_lib
 
 HAS_YANDEX = False
 try:
@@ -24,9 +25,11 @@ else:
     HAS_YANDEX = True
 
 if TYPE_CHECKING:
-    from typing_extensions import Unpack
-    from typing_extensions import NotRequired
-    from typing_extensions import Required
+    from typing_extensions import (  # type: ignore[attr-defined]
+        NotRequired,
+        Required,
+        Unpack,
+    )
 
     class ModuleParams(TypedDict, total=False):
         argument_spec: Required[MutableMapping[str, Any]]

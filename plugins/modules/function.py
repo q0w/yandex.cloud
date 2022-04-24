@@ -1,17 +1,18 @@
 from __future__ import annotations
 
-from typing import Any
-from typing import Mapping
+from typing import Any, Mapping
 
-from ..module_utils.basic import get_base_arg_spec
-from ..module_utils.basic import get_base_required_if
-from ..module_utils.basic import init_module
-from ..module_utils.basic import init_sdk
-from ..module_utils.basic import log_grpc_error
-from ..module_utils.function import get_function_by_id
-from ..module_utils.function import get_function_by_name
+from ..module_utils.basic import (
+    get_base_arg_spec,
+    get_base_required_if,
+    init_module,
+    init_sdk,
+    log_grpc_error,
+)
+from ..module_utils.function import get_function_by_id, get_function_by_name
 
 try:
+    from google.protobuf.json_format import MessageToDict
     from yandex.cloud.serverless.functions.v1.function_service_pb2 import (
         CreateFunctionRequest,
         DeleteFunctionRequest,
@@ -20,7 +21,6 @@ try:
     from yandex.cloud.serverless.functions.v1.function_service_pb2_grpc import (
         FunctionServiceStub,
     )
-    from google.protobuf.json_format import MessageToDict
 except ImportError:
     pass
 

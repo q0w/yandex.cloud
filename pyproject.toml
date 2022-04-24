@@ -5,6 +5,10 @@ min_python_version = 3.8
 [tool.blue]
 line-length = 88
 
+[tool.isort]
+profile = "black"
+known_third_party = ["ansible"]
+
 [tool.mypy]
 allow_redefinition = false
 check_untyped_defs = true
