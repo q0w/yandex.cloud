@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from google.protobuf.json_format import MessageToDict
-
 from ..module_utils.basic import (
     get_base_arg_spec,
     get_base_required_if,
@@ -17,6 +15,7 @@ from ..module_utils.function import (
 )
 
 try:
+    from google.protobuf.json_format import MessageToDict
     from yandex.cloud.serverless.functions.v1.function_service_pb2 import (
         RemoveFunctionTagRequest,
         SetFunctionTagRequest,
