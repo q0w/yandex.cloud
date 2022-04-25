@@ -109,12 +109,7 @@ def main():
     function_version_id = module.params.get('function_version_id')
 
     if not function_version_id:
-        if function_id:
-            versions = list_function_versions_by_function(
-                function_service,
-                function_id=function_id,
-            ).get('versions', [])
-        else:
+        if not function_id and folder_id and name:
             # FIXME: Use filter by Function.name in ListVersions
             with log_grpc_error(module):
                 curr_function = get_function_by_name(
@@ -127,11 +122,12 @@ def main():
                 # FIXME: add stubs
                 raise AssertionError('unreachable')
             function_id = curr_function.get('id')
-            with log_grpc_error(module):
-                versions = list_function_versions_by_function(
-                    function_service,
-                    function_id=function_id,
-                ).get('versions', [])
+
+        with log_grpc_error(module):
+            versions = list_function_versions_by_function(
+                function_service,
+                function_id=function_id,
+            ).get('versions', [])
         if not versions:
             module.fail_json(msg=f'no versions for function {name}')
         function_version_id = versions[0].get('id')
