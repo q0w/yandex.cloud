@@ -76,7 +76,6 @@ def remove_access_bindings(
 
 
 def main():
-    # TODO: state
     argument_spec = get_base_arg_spec()
     required_if = get_base_required_if()
     argument_spec.update(
@@ -123,6 +122,7 @@ def main():
     function_service = sdk.client(FunctionServiceStub)
 
     result: dict[str, Any] = {}
+    changed = False
     state = module.params.get('state')
     function_id = module.params.get('function_id')
     folder_id = module.params.get('folder_id')
@@ -143,23 +143,27 @@ def main():
         function_id = curr_function.get('id')
 
     if state == 'present':
-        result.update(
-            set_access_bindings(
-                function_service,
-                function_id=function_id,
-                access_bindings=access_bindings,
-            ),
-        )
+        with log_grpc_error(module):
+            result.update(
+                set_access_bindings(
+                    function_service,
+                    function_id=function_id,
+                    access_bindings=access_bindings,
+                ),
+            )
+        changed = True
     elif state == 'absent':
-        result.update(
-            remove_access_bindings(
-                function_service,
-                function_id=function_id,
-                access_bindings=access_bindings,
-            ),
-        )
+        with log_grpc_error(module):
+            result.update(
+                remove_access_bindings(
+                    function_service,
+                    function_id=function_id,
+                    access_bindings=access_bindings,
+                ),
+            )
+        changed = True
 
-    module.exit_json(**result)
+    module.exit_json(**result, changed=changed)
 
 
 if __name__ == '__main__':

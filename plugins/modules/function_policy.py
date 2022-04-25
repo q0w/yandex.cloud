@@ -106,6 +106,7 @@ def main():
     function_service = sdk.client(FunctionServiceStub)
 
     result: dict[str, Any] = {}
+    changed = False
     function_id = module.params.get('function_id')
     folder_id = module.params.get('folder_id')
     name = module.params.get('name')
@@ -139,6 +140,7 @@ def main():
                     zone_requests_limit=zone_requests_limit,
                 ),
             )
+        changed = True
     elif module.params.get('state') == 'absent':
         with log_grpc_error(module):
             result.update(
@@ -148,8 +150,9 @@ def main():
                     tag=tag,
                 ),
             )
+        changed = True
 
-    module.exit_json(**result)
+    module.exit_json(**result, changed=changed)
 
 
 if __name__ == '__main__':
