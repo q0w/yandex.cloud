@@ -25,11 +25,7 @@ else:
     HAS_YANDEX = True
 
 if TYPE_CHECKING:
-    from typing_extensions import (  # type: ignore[attr-defined]
-        NotRequired,
-        Required,
-        Unpack,
-    )
+    from typing_extensions import NotRequired, Required, Unpack
 
     class ModuleParams(TypedDict, total=False):
         argument_spec: Required[MutableMapping[str, Any]]
@@ -71,7 +67,7 @@ def _get_auth_settings(
     return config
 
 
-def get_base_arg_spec() -> dict[str, Any]:
+def default_arg_spec() -> dict[str, dict[str, Any]]:
     return {
         'auth_kind': {
             'type': 'str',
@@ -84,7 +80,7 @@ def get_base_arg_spec() -> dict[str, Any]:
     }
 
 
-def get_base_required_if() -> list[tuple[str, str, tuple[str, ...], bool]]:
+def default_required_if() -> list[tuple[str, str, tuple[str, ...], bool]]:
     return [('auth_kind', 'sa_file', ('sa_path', 'sa_content'), True)]
 
 
@@ -98,7 +94,7 @@ def init_sdk(module: AnsibleModule) -> yandexcloud.SDK:
     )
 
 
-def init_module(**params: Unpack[ModuleParams]) -> AnsibleModule:
+def init_module(**params: Unpack[ModuleParams]) -> AnsibleModule:   # type: ignore[misc]
     module = AnsibleModule(**params)
     if not HAS_YANDEX:
         module.fail_json(

@@ -3,8 +3,8 @@ from __future__ import annotations
 from typing import Any
 
 from ..module_utils.basic import (
-    get_base_arg_spec,
-    get_base_required_if,
+    default_arg_spec,
+    default_required_if,
     init_module,
     init_sdk,
     log_grpc_error,
@@ -69,8 +69,8 @@ def remove_scaling_policy(
 
 
 def main():
-    argument_spec = get_base_arg_spec()
-    required_if = get_base_required_if()
+    argument_spec = default_arg_spec()
+    required_if = default_required_if()
     argument_spec.update(
         {
             'name': {'type': 'str'},
