@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Callable, NoReturn, cast
 
 from ..module_utils.basic import (
     default_arg_spec,
@@ -122,9 +122,9 @@ def main():
                 name=name,
             )
         if not curr_function:
-            module.fail_json(msg=f'function {name} not found')
-            # FIXME: add stubs
-            raise AssertionError('unreachable')
+            cast(Callable[..., NoReturn], module.fail_json)(
+                msg=f'function {name} not found',
+            )
         function_id = curr_function.get('id')
 
     if module.params.get('state') == 'present':
