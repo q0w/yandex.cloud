@@ -3,6 +3,7 @@ from __future__ import annotations
 import contextlib
 import json
 import traceback
+import zipfile
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -111,3 +112,12 @@ def log_grpc_error(module: AnsibleModule) -> Generator[None, None, None]:
     except grpc.RpcError as e:
         (state,) = e.args
         module.fail_json(msg=state.details)
+
+
+def validate_zip(module: AnsibleModule, filename: str) -> None:
+    try:
+        with zipfile.ZipFile(filename, 'r') as f:
+            if f.testzip():
+                module.fail_json(msg=f'{filename} is not valid zip file')
+    except (FileNotFoundError, zipfile.BadZipfile) as e:
+        module.fail_json(msg=str(e))

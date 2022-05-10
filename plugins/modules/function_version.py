@@ -20,7 +20,9 @@ from ..module_utils.basic import (
     init_module,
     init_sdk,
     log_grpc_error,
+    validate_zip,
 )
+from ..module_utils.fn import tap
 from ..module_utils.function import get_function_by_name
 
 try:
@@ -230,6 +232,7 @@ def _get_callable(
             return v(params[k])
 
 
+# TODO: validate files
 def main():
     argument_spec = default_arg_spec()
     required_if = default_required_if()
@@ -310,7 +313,7 @@ def main():
         'package': lambda package: partial(create_version_by_package, package=package),
         'content': lambda content: partial(
             create_version_by_content,
-            content_file=content,
+            content_file=tap(partial(validate_zip, module))(content),
         ),
         'version_id': lambda version_id: partial(
             create_version_by_version_id,
