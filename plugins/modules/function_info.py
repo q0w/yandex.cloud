@@ -144,7 +144,7 @@ def list_operations(
     }
 
 
-def iter_callables(
+def _iter_callables(
     key: str,
     callables: dict[str, Callable[..., dict[str, dict[str, Any]]]],
 ) -> Generator[Callable[..., dict[str, dict[str, Any]]], None, None]:
@@ -231,7 +231,7 @@ def main():
 
     if function_id:
         with log_grpc_error(module):
-            for f in iter_callables(query, callables_by_function):
+            for f in _iter_callables(query, callables_by_function):
                 result.update(f(function_service, function_id=function_id))
 
     elif name and folder_id:
@@ -245,14 +245,14 @@ def main():
             )
         if curr_function:
             with log_grpc_error(module):
-                for f in iter_callables(query, callables_by_function):
+                for f in _iter_callables(query, callables_by_function):
                     result.update(
                         f(function_service, function_id=curr_function.get('id')),
                     )
 
     elif folder_id:
         with log_grpc_error(module):
-            for f in iter_callables(query, callables_by_folder):
+            for f in _iter_callables(query, callables_by_folder):
                 result.update(f(function_service, folder_id=folder_id))
 
     result['changed'] = False
