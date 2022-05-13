@@ -19,11 +19,13 @@ from ..module_utils.basic import (
     default_required_if,
     init_module,
     init_sdk,
+    log_error,
     log_grpc_error,
     validate_zip,
 )
 from ..module_utils.fn import tap
 from ..module_utils.function import get_function_by_name
+from ..module_utils.typedefs import Connectivity
 
 try:
     from google.protobuf.json_format import MessageToDict
@@ -47,12 +49,6 @@ if TYPE_CHECKING:
 
 class Resources(TypedDict):
     memory: int
-
-
-# TODO: total=false?
-class Connectivity(TypedDict):
-    network_id: str
-    subnet_id: list[str]
 
 
 # TODO: total=false?
@@ -99,6 +95,7 @@ def create_version_by_package(
                     secrets=secrets,
                 ),
             ),
+            preserving_proto_field_name=True,
         ),
     }
 
@@ -141,6 +138,7 @@ def create_version_by_content(
                     secrets=secrets,
                 ),
             ),
+            preserving_proto_field_name=True,
         ),
     }
 
@@ -181,6 +179,7 @@ def create_version_by_version_id(
                     secrets=secrets,
                 ),
             ),
+            preserving_proto_field_name=True,
         ),
     }
 
@@ -232,7 +231,6 @@ def _get_callable(
             return v(params[k])
 
 
-# TODO: validate files
 def main():
     argument_spec = default_arg_spec()
     required_if = default_required_if()
@@ -307,7 +305,8 @@ def main():
     folder_id = module.params.get('folder_id')
     name = module.params.get('name')
     execution_timeout = Duration()
-    execution_timeout.FromJsonString(module.params.get('execution_timeout'))
+    with log_error(module):
+        execution_timeout.FromJsonString(module.params.get('execution_timeout'))
 
     callables: dict[str, Callable[..., partial[dict[str, dict[str, Any]]]]] = {
         'package': lambda package: partial(create_version_by_package, package=package),

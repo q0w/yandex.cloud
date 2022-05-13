@@ -55,10 +55,11 @@ def _get_auth_settings(
         sa_path = module.params.get('sa_path')
         sa_content = module.params.get('sa_content')
         if sa_path:
-            with open(sa_path) as f:
+            with log_error(module), open(sa_path) as f:
                 config['service_account_key'] = json.load(f)
         elif sa_content:
-            config['service_account_key'] = json.loads(sa_content)
+            with log_error(module):
+                config['service_account_key'] = json.loads(sa_content)
         else:
             module.fail_json(
                 "Either 'sa_path' or 'sa_content' must be set"
@@ -112,6 +113,14 @@ def log_grpc_error(module: AnsibleModule) -> Generator[None, None, None]:
     except grpc.RpcError as e:
         (state,) = e.args
         module.fail_json(msg=state.details)
+
+
+@contextlib.contextmanager
+def log_error(module: AnsibleModule) -> Generator[None, None, None]:
+    try:
+        yield
+    except Exception as e:
+        module.fail_json(msg=str(e))
 
 
 def validate_zip(module: AnsibleModule, filename: str) -> None:
