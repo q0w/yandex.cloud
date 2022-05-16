@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Callable, NoReturn, cast
 
-from ..module_utils.api_gateway import get_api_gateway_by_id, get_api_gateway_by_name
+from ..module_utils.api_gateway import get_api_gateway_by_name
 from ..module_utils.basic import (
     default_arg_spec,
     default_required_if,
@@ -103,42 +103,37 @@ def main():
     changed = False
     state = module.params.get('state')
 
-    with log_grpc_error(module):
-        curr_api_gateway = get_api_gateway_by_id(
-            gateway_service,
-            api_gateway_id,
-        ) or get_api_gateway_by_name(gateway_service, folder_id, name)
+    if not api_gateway_id and folder_id and name:
+        with log_grpc_error(module):
+            api_gateway = get_api_gateway_by_name(
+                gateway_service,
+                folder_id=folder_id,
+                name=name,
+            )
+        if not api_gateway:
+            cast(Callable[..., NoReturn], module.fail_json)(
+                msg=f'Api gateway {name} not found',
+            )
+        api_gateway_id = api_gateway.get('id')
 
     if state == 'present':
-        if not curr_api_gateway:
-            with log_grpc_error(module):
-                result.update(
-                    add_domain(
-                        gateway_service,
-                        api_gateway_id=api_gateway_id,
-                        domain_id=domain_id,
-                    ),
-                )
-        else:
-            with log_grpc_error(module):
-                result.update(
-                    remove_domain(
-                        gateway_service,
-                        api_gateway_id=api_gateway_id,
-                        domain_id=domain_id,
-                    ),
-                )
+        with log_grpc_error(module):
+            result.update(
+                add_domain(
+                    gateway_service,
+                    api_gateway_id=api_gateway_id,
+                    domain_id=domain_id,
+                ),
+            )
         changed = True
     elif state == 'absent':
-        if not curr_api_gateway:
-            cast(Callable[..., NoReturn], module.fail_json)(
-                msg=f'api gateway {api_gateway_id or name} not found',
-            )
         with log_grpc_error(module):
-            remove_domain(
-                gateway_service,
-                api_gateway_id=curr_api_gateway['id'],
-                domain_id=domain_id,
+            result.update(
+                remove_domain(
+                    gateway_service,
+                    api_gateway_id=api_gateway_id,
+                    domain_id=domain_id,
+                ),
             )
         changed = True
 

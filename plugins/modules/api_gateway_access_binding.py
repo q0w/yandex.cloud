@@ -50,16 +50,16 @@ def main():
 
     if not api_gateway_id and folder_id and name:
         with log_grpc_error(module):
-            curr_function = get_api_gateway_by_name(
+            api_gateway = get_api_gateway_by_name(
                 gateway_service,
                 folder_id=folder_id,
                 name=name,
             )
-        if not curr_function:
+        if not api_gateway:
             cast(Callable[..., NoReturn], module.fail_json)(
-                msg=f'api gateway {name} not found',
+                msg=f'Api gateway {name} not found',
             )
-        api_gateway_id = curr_function.get('id')
+        api_gateway_id = api_gateway.get('id')
 
     if state == 'present':
         with log_grpc_error(module):
