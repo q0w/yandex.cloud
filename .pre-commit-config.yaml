@@ -38,6 +38,6 @@ repos:
     -   id: mypy
         additional_dependencies: [types-protobuf]
 -  repo: https://github.com/RobertCraigie/pyright-python
-   rev: v1.1.245
+   rev: v1.1.247
    hooks:
    -  id: pyright

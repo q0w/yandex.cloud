@@ -25,7 +25,6 @@ from ..module_utils.basic import (
 )
 from ..module_utils.fn import tap
 from ..module_utils.function import get_function_by_name
-from ..module_utils.typedefs import Connectivity
 
 try:
     from google.protobuf.json_format import MessageToDict
@@ -40,6 +39,8 @@ except ImportError:
 
 if TYPE_CHECKING:
     from typing_extensions import NotRequired, Required
+
+    from ..module_utils.typedefs import Connectivity
 
     class Package(TypedDict, total=False):
         bucket_name: Required[str]

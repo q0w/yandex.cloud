@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Callable, NoReturn, cast
 
+from ..module_utils.api_gateway import get_api_gateway_by_name
 from ..module_utils.basic import (
     default_arg_spec,
     default_required_if,
@@ -9,7 +10,6 @@ from ..module_utils.basic import (
     init_sdk,
     log_grpc_error,
 )
-from ..module_utils.function import get_function_by_name
 from ..module_utils.resource import default_arg_spec as ab_default_arg_spec
 from ..module_utils.resource import (
     default_required_by,
@@ -19,8 +19,8 @@ from ..module_utils.resource import (
 )
 
 try:
-    from yandex.cloud.serverless.functions.v1.function_service_pb2_grpc import (
-        FunctionServiceStub,
+    from yandex.cloud.serverless.apigateway.v1.apigateway_service_pb2_grpc import (
+        ApiGatewayServiceStub,
     )
 except ImportError:
     pass
@@ -28,45 +28,45 @@ except ImportError:
 
 def main():
     argument_spec = {**default_arg_spec(), **ab_default_arg_spec()}
-    required_if = default_required_if()
 
     module = init_module(
         argument_spec=argument_spec,
-        required_if=required_if,
+        required_if=default_required_if(),
         required_one_of=default_required_one_of(),
         required_by=default_required_by(),
         supports_check_mode=True,
     )
+
     sdk = init_sdk(module)
-    function_service = sdk.client(FunctionServiceStub)
+    gateway_service = sdk.client(ApiGatewayServiceStub)
 
     result = {}
     changed = False
     state = module.params.get('state')
-    function_id = module.params.get('resource_id')
+    api_gateway_id = module.params.get('resource_id')
     folder_id = module.params.get('folder_id')
     name = module.params.get('name')
     access_bindings = module.params.get('access_bindings')
 
-    if not function_id and folder_id and name:
+    if not api_gateway_id and folder_id and name:
         with log_grpc_error(module):
-            curr_function = get_function_by_name(
-                function_service,
+            curr_function = get_api_gateway_by_name(
+                gateway_service,
                 folder_id=folder_id,
                 name=name,
             )
         if not curr_function:
             cast(Callable[..., NoReturn], module.fail_json)(
-                msg=f'function {name} not found',
+                msg=f'api gateway {name} not found',
             )
-        function_id = curr_function.get('id')
+        api_gateway_id = curr_function.get('id')
 
     if state == 'present':
         with log_grpc_error(module):
             result.update(
                 set_access_bindings(
-                    function_service,
-                    resource_id=function_id,
+                    gateway_service,
+                    resource_id=api_gateway_id,
                     access_bindings=access_bindings,
                 ),
             )
@@ -75,8 +75,8 @@ def main():
         with log_grpc_error(module):
             result.update(
                 remove_access_bindings(
-                    function_service,
-                    resource_id=function_id,
+                    gateway_service,
+                    resource_id=api_gateway_id,
                     access_bindings=access_bindings,
                 ),
             )

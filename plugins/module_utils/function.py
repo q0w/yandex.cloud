@@ -16,6 +16,8 @@ from yandex.cloud.serverless.functions.v1.function_service_pb2_grpc import (
 if TYPE_CHECKING:
     from typing_extensions import NotRequired, Required
 
+    from ..module_utils.typedefs import Metadata, Operation
+
     class Function(TypedDict, total=False):
         id: Required[str]
         folder_id: Required[str]
@@ -36,20 +38,11 @@ if TYPE_CHECKING:
         zone_instances_limit: NotRequired[str]
         zone_requests_limit: NotRequired[str]
 
-    _Metadata = TypedDict('_Metadata', {'@type': str})
-
-    class FunctionMetadata(_Metadata):
+    class FunctionMetadata(Metadata):
         function_id: str
 
-    # TODO: add 'done', 'result', 'error'
-    class _Operation(TypedDict, total=False):
-        id: str
-        description: NotRequired[str]
-        created_at: Required[str]
-        created_by: Required[str]
-        modified_at: Required[str]
-        done: NotRequired[bool]
-        metadata: Required[FunctionMetadata]
+    class FunctionOperation(Operation, FunctionMetadata):
+        ...
 
 
 class ListFunctionsResponse(TypedDict, total=False):

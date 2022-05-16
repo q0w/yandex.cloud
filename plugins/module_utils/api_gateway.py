@@ -12,10 +12,10 @@ from yandex.cloud.serverless.apigateway.v1.apigateway_service_pb2_grpc import (
     ApiGatewayServiceStub,
 )
 
-from ..module_utils.typedefs import Connectivity
-
 if TYPE_CHECKING:
     from typing_extensions import NotRequired, Required
+
+    from ..module_utils.typedefs import Connectivity
 
     class ApiGateway(TypedDict, total=False):
         id: Required[str]

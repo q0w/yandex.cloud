@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Callable, Mapping, NoReturn, cast
+from typing import TYPE_CHECKING, Any, Callable, Mapping, NoReturn, cast
 
 from ..module_utils.api_gateway import get_api_gateway_by_id, get_api_gateway_by_name
 from ..module_utils.basic import (
@@ -11,7 +11,6 @@ from ..module_utils.basic import (
     log_error,
     log_grpc_error,
 )
-from ..module_utils.typedefs import Connectivity
 
 try:
     from google.protobuf.json_format import MessageToDict
@@ -25,6 +24,9 @@ try:
     )
 except ImportError:
     pass
+
+if TYPE_CHECKING:
+    from ..module_utils.typedefs import Connectivity
 
 
 # TODO: accept raw json/yaml openapi_spec
