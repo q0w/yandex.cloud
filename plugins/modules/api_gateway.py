@@ -26,7 +26,7 @@ except ImportError:
     pass
 
 if TYPE_CHECKING:
-    from ..module_utils.typedefs import Connectivity, OperationResult
+    from ..module_utils.types import Connectivity, OperationResult
 
 
 # TODO: accept raw json/yaml openapi_spec

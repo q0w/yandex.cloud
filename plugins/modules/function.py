@@ -10,7 +10,7 @@ from ..module_utils.basic import (
     log_grpc_error,
 )
 from ..module_utils.function import get_function_by_id, get_function_by_name
-from ..module_utils.typedefs import OperationResult
+from ..module_utils.types import OperationResult
 
 try:
     from google.protobuf.json_format import MessageToDict

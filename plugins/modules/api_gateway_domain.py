@@ -24,7 +24,7 @@ except ImportError:
     pass
 
 if TYPE_CHECKING:
-    from ..module_utils.typedefs import OperationResult
+    from ..module_utils.types import OperationResult
 
 
 def add_domain(

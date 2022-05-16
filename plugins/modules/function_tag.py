@@ -13,7 +13,7 @@ from ..module_utils.function import (
     get_function_by_name,
     list_function_versions_by_function,
 )
-from ..module_utils.typedefs import OperationResult
+from ..module_utils.types import OperationResult
 
 try:
     from google.protobuf.json_format import MessageToDict

@@ -16,7 +16,7 @@ from yandex.cloud.serverless.functions.v1.function_service_pb2_grpc import (
 if TYPE_CHECKING:
     from typing_extensions import NotRequired, Required
 
-    from ..module_utils.typedefs import Metadata, Operation
+    from ..module_utils.types import Metadata, Operation
 
     class Function(TypedDict, total=False):
         id: Required[str]

@@ -11,12 +11,7 @@ from yandex.cloud.access.access_pb2 import (
 if TYPE_CHECKING:
     from google.protobuf.message import Message
 
-    from ..module_utils.typedefs import (
-        AccessBinding,
-        Metadata,
-        Operation,
-        OperationResult,
-    )
+    from ..module_utils.types import AccessBinding, Metadata, Operation, OperationResult
 
     class ABMetadata(Metadata):
         resource_id: str

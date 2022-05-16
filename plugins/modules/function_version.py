@@ -40,7 +40,7 @@ except ImportError:
 if TYPE_CHECKING:
     from typing_extensions import NotRequired, Required
 
-    from ..module_utils.typedefs import Connectivity, OperationResult
+    from ..module_utils.types import Connectivity, OperationResult
 
     class Package(TypedDict, total=False):
         bucket_name: Required[str]
