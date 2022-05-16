@@ -14,6 +14,7 @@ from ..module_utils.function import (
     list_function_versions_by_folder,
     list_function_versions_by_function,
 )
+from ..module_utils.typedefs import OperationResult
 
 try:
     from google.protobuf.json_format import MessageToDict
@@ -53,7 +54,7 @@ def list_scaling_policies(
     function_id: str,
     page_size: int | None = None,
     page_token: str | None = None,
-) -> dict[str, dict[str, Any]]:
+) -> OperationResult:
     return {
         'ListScalingPolicies': MessageToDict(
             client.ListScalingPolicies(
@@ -77,7 +78,7 @@ def list_tag_history(
     page_size: int | None = None,
     page_token: str | None = None,
     filter: str | None = None,
-) -> dict[str, dict[str, Any]]:
+) -> OperationResult:
     return {
         'ListFunctionTagHistory': MessageToDict(
             client.ListTagHistory(
@@ -93,7 +94,7 @@ def list_tag_history(
     }
 
 
-def list_runtimes(client: FunctionServiceStub) -> dict[str, dict[str, Any]]:
+def list_runtimes(client: FunctionServiceStub) -> OperationResult:
     return {
         'ListRuntimes': MessageToDict(
             client.ListRuntimes(ListRuntimesRequest()),
@@ -108,7 +109,7 @@ def list_access_bindings(
     function_id: str,
     page_size: int | None = None,
     page_token: str | None = None,
-) -> dict[str, dict[str, Any]]:
+) -> OperationResult:
     return {
         'ListAccessBindings': MessageToDict(
             client.ListAccessBindings(
@@ -129,7 +130,7 @@ def list_operations(
     page_size: int | None = None,
     page_token: str | None = None,
     filter: str | None = None,
-) -> dict[str, dict[str, Any]]:
+) -> OperationResult:
     return {
         'ListFunctionOperations': MessageToDict(
             client.ListOperations(
@@ -146,8 +147,8 @@ def list_operations(
 
 def _iter_callables(
     key: str,
-    callables: dict[str, Callable[..., dict[str, dict[str, Any]]]],
-) -> Generator[Callable[..., dict[str, dict[str, Any]]], None, None]:
+    callables: dict[str, Callable[..., OperationResult]],
+) -> Generator[Callable[..., OperationResult], None, None]:
     f = callables.get(key)
     if f:
         yield f
@@ -211,7 +212,7 @@ def main():
     name = module.params.get('name')
     query = module.params.get('query')
 
-    callables_by_function: dict[str, Callable[..., dict[str, dict[str, Any]]]] = {
+    callables_by_function: dict[str, Callable[..., OperationResult]] = {
         'versions': lambda c, **kwargs: {
             'ListFunctionsVersions': list_function_versions_by_function(c, **kwargs),
         },

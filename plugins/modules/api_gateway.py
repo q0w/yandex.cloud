@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Mapping, NoReturn, cast
+from typing import TYPE_CHECKING, Callable, Mapping, NoReturn, cast
 
 from ..module_utils.api_gateway import get_api_gateway_by_id, get_api_gateway_by_name
 from ..module_utils.basic import (
@@ -26,7 +26,7 @@ except ImportError:
     pass
 
 if TYPE_CHECKING:
-    from ..module_utils.typedefs import Connectivity
+    from ..module_utils.typedefs import Connectivity, OperationResult
 
 
 # TODO: accept raw json/yaml openapi_spec
@@ -39,7 +39,7 @@ def create_api_gateway(
     labels: Mapping[str, str] | None = None,
     openapi_spec: str,
     connectivity: Connectivity | None = None,
-) -> dict[str, dict[str, Any]]:
+) -> OperationResult:
     return {
         'CreateApiGateway': MessageToDict(
             client.Create(
@@ -67,7 +67,7 @@ def update_api_gateway(
     labels: Mapping[str, str] | None = None,
     openapi_spec: str | None = None,
     connectivity: Connectivity | None = None,
-) -> dict[str, dict[str, Any]]:
+) -> OperationResult:
     return {
         'UpdateApiGateway': MessageToDict(
             client.Update(
@@ -87,7 +87,7 @@ def update_api_gateway(
 def delete_api_gateway(
     client: ApiGatewayServiceStub,
     api_gateway_id: str,
-) -> dict[str, dict[str, Any]]:
+) -> OperationResult:
     return {
         'DeleteApiGateway': MessageToDict(
             client.Delete(DeleteApiGatewayRequest(api_gateway_id=api_gateway_id)),
@@ -144,7 +144,7 @@ def main():
     sdk = init_sdk(module)
     gateway_service = sdk.client(ApiGatewayServiceStub)
 
-    result: dict[str, Any] = {}
+    result = {}
     api_gateway_id = module.params.get('api_gateway_id')
     folder_id = module.params.get('folder_id')
     name = module.params.get('name')

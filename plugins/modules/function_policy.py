@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Callable, NoReturn, cast
+from typing import Callable, NoReturn, cast
 
 from ..module_utils.basic import (
     default_arg_spec,
@@ -10,6 +10,7 @@ from ..module_utils.basic import (
     log_grpc_error,
 )
 from ..module_utils.function import get_function_by_name
+from ..module_utils.typedefs import OperationResult
 
 try:
     from google.protobuf.json_format import MessageToDict
@@ -32,7 +33,7 @@ def set_scaling_policy(
     provisioned_instances_count: int | None = None,
     zone_instances_limit: int | None = None,
     zone_requests_limit: int | None = None,
-) -> dict[str, dict[str, Any]]:
+) -> OperationResult:
     return {
         'SetScalingPolicy': MessageToDict(
             client.SetScalingPolicy(
@@ -54,7 +55,7 @@ def remove_scaling_policy(
     *,
     function_id: str,
     tag: str,
-) -> dict[str, dict[str, Any]]:
+) -> OperationResult:
     return {
         'RemoveScalingPolicy': MessageToDict(
             client.RemoveScalingPolicy(
@@ -104,7 +105,7 @@ def main():
     sdk = init_sdk(module)
     function_service = sdk.client(FunctionServiceStub)
 
-    result: dict[str, Any] = {}
+    result = {}
     changed = False
     function_id = module.params.get('function_id')
     folder_id = module.params.get('folder_id')

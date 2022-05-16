@@ -40,7 +40,7 @@ except ImportError:
 if TYPE_CHECKING:
     from typing_extensions import NotRequired, Required
 
-    from ..module_utils.typedefs import Connectivity
+    from ..module_utils.typedefs import Connectivity, OperationResult
 
     class Package(TypedDict, total=False):
         bucket_name: Required[str]
@@ -76,7 +76,7 @@ def create_version_by_package(
     connectivity: Connectivity | None = None,
     named_service_accounts: Mapping[str, str] | None = None,
     secrets: list[Secret] | None = None,
-) -> dict[str, dict[str, Any]]:
+) -> OperationResult:
     return {
         'CreateFunctionVersion': MessageToDict(
             client.CreateVersion(
@@ -117,7 +117,7 @@ def create_version_by_content(
     connectivity: Connectivity | None = None,
     named_service_accounts: Mapping[str, str] | None = None,
     secrets: list[Secret] | None = None,
-) -> dict[str, dict[str, Any]]:
+) -> OperationResult:
     with open(content_file, 'rb') as f:
         content = f.read()
     return {
@@ -160,7 +160,7 @@ def create_version_by_version_id(
     connectivity: Connectivity | None = None,
     named_service_accounts: Mapping[str, str] | None = None,
     secrets: list[Secret] | None = None,
-) -> dict[str, dict[str, Any]]:
+) -> OperationResult:
     return {
         'CreateFunctionVersion': MessageToDict(
             client.CreateVersion(
@@ -203,7 +203,7 @@ class _Version(TypedDict):
 def _get_callable(
     params: _Package,
     callables: dict[str, Callable[..., partial[dict[str, dict[str, Any]]]]],
-) -> partial[dict[str, dict[str, Any]]]:
+) -> partial[OperationResult]:
     ...
 
 
@@ -211,7 +211,7 @@ def _get_callable(
 def _get_callable(
     params: _Content,
     callables: dict[str, Callable[..., partial[dict[str, dict[str, Any]]]]],
-) -> partial[dict[str, dict[str, Any]]]:
+) -> partial[OperationResult]:
     ...
 
 
@@ -219,7 +219,7 @@ def _get_callable(
 def _get_callable(
     params: _Version,
     callables: dict[str, Callable[..., partial[dict[str, dict[str, Any]]]]],
-) -> partial[dict[str, dict[str, Any]]]:
+) -> partial[OperationResult]:
     ...
 
 
@@ -309,7 +309,7 @@ def main():
     with log_error(module):
         execution_timeout.FromJsonString(module.params.get('execution_timeout'))
 
-    callables: dict[str, Callable[..., partial[dict[str, dict[str, Any]]]]] = {
+    callables: dict[str, Callable[..., partial[OperationResult]]] = {
         'package': lambda package: partial(create_version_by_package, package=package),
         'content': lambda content: partial(
             create_version_by_content,

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Mapping
+from typing import Mapping
 
 from ..module_utils.basic import (
     default_arg_spec,
@@ -10,6 +10,7 @@ from ..module_utils.basic import (
     log_grpc_error,
 )
 from ..module_utils.function import get_function_by_id, get_function_by_name
+from ..module_utils.typedefs import OperationResult
 
 try:
     from google.protobuf.json_format import MessageToDict
@@ -28,7 +29,7 @@ except ImportError:
 def delete_function(
     client: FunctionServiceStub,
     function_id: str,
-) -> dict[str, dict[str, Any]]:
+) -> OperationResult:
     return {
         'DeleteFunction': MessageToDict(
             client.Delete(DeleteFunctionRequest(function_id=function_id)),
@@ -44,7 +45,7 @@ def create_function(
     name: str | None = None,
     description: str | None = None,
     labels: Mapping[str, str] | None = None,
-) -> dict[str, dict[str, Any]]:
+) -> OperationResult:
     return {
         'CreateFunction': MessageToDict(
             client.Create(
@@ -68,7 +69,7 @@ def update_function(
     name: str | None = None,
     description: str | None = None,
     labels: Mapping[str, str] | None = None,
-) -> dict[str, dict[str, Any]]:
+) -> OperationResult:
     return {
         'UpdateFunction': MessageToDict(
             client.Update(

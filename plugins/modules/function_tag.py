@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Callable, NoReturn, cast
+from typing import Callable, NoReturn, cast
 
 from ..module_utils.basic import (
     default_arg_spec,
@@ -13,6 +13,7 @@ from ..module_utils.function import (
     get_function_by_name,
     list_function_versions_by_function,
 )
+from ..module_utils.typedefs import OperationResult
 
 try:
     from google.protobuf.json_format import MessageToDict
@@ -32,7 +33,7 @@ def set_tag(
     *,
     function_version_id: str,
     tag: str,
-) -> dict[str, dict[str, Any]]:
+) -> OperationResult:
     return {
         'SetFunctionTag': MessageToDict(
             client.SetTag(
@@ -51,7 +52,7 @@ def remove_tag(
     *,
     function_version_id: str,
     tag: str,
-) -> dict[str, dict[str, Any]]:
+) -> OperationResult:
     return {
         'RemoveFunctionTag': MessageToDict(
             client.RemoveTag(
@@ -99,7 +100,7 @@ def main():
     sdk = init_sdk(module)
     function_service = sdk.client(FunctionServiceStub)
 
-    result: dict[str, Any] = {}
+    result = {}
     changed = False
     state = module.params.get('state')
     function_id = module.params.get('function_id')
