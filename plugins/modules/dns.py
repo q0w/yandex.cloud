@@ -2,9 +2,8 @@ from __future__ import annotations
 
 from contextlib import suppress
 from functools import partial
-from typing import TYPE_CHECKING, Callable, Mapping, NoReturn, TypedDict, cast, overload
+from typing import TYPE_CHECKING, Callable, Mapping, NoReturn, TypedDict, cast
 
-from ..module_utils.api_gateway import get_api_gateway_by_name
 from ..module_utils.basic import (
     default_arg_spec,
     default_required_if,
@@ -12,96 +11,93 @@ from ..module_utils.basic import (
     init_sdk,
     log_grpc_error,
 )
+from ..module_utils.resource import get_resource_by_id, get_resource_by_name
 
 with suppress(ImportError):
     from google.protobuf.json_format import MessageToDict
     from yandex.cloud.dns.v1.dns_zone_service_pb2 import (
         CreateDnsZoneRequest,
+        DeleteDnsZoneRequest,
+        GetDnsZoneRequest,
+        ListDnsZonesRequest,
         UpdateDnsZoneRequest,
     )
     from yandex.cloud.dns.v1.dns_zone_service_pb2_grpc import DnsZoneServiceStub
 
 
 if TYPE_CHECKING:
-    from typing_extensions import NotRequired, Required, Unpack
-
     from ..module_utils.types import OperationResult
 
-    class _DnsKwargs(TypedDict, total=False):
-        name: NotRequired[str]
-        description: NotRequired[str]
-        labels: NotRequired[Mapping[str, str]]
 
-    class _CreateDnsKwargs(_DnsKwargs):
-        folder_id: Required[str]
-        zone: Required[str]
-
-    class _UpdateDnsKwargs(_DnsKwargs):
-        # TODO: update_mask
-        dns_zone_id: Required[str]
-
-    class PrivateUpdateDnsKwargs(_UpdateDnsKwargs):
-        private_visibility: Required[PrivateVisibility]
-
-    class PublicUpdateDnsKwargs(_UpdateDnsKwargs):
-        public_visibility: Required[Mapping]
-
-    class PrivateCreateDnsKwargs(_CreateDnsKwargs):
-        private_visibility: Required[PrivateVisibility]
-
-    class PublicCreateDnsKwargs(_CreateDnsKwargs):
-        public_visibility: Required[Mapping]
-
-
-class PrivateVisibility(TypedDict):
+class Visibility(TypedDict):
     network_ids: list[str]
 
 
-@overload
-def create(
+def create_dns(
     client: DnsZoneServiceStub,
-    **kwargs: Unpack[PrivateCreateDnsKwargs],  # type: ignore[misc]
+    *,
+    folder_id: str,
+    zone: str,
+    name: str | None = None,
+    description: str | None = None,
+    labels: Mapping[str, str] | None = None,
+    visibility: Visibility | None = None,
 ) -> OperationResult:
-    ...
-
-
-@overload
-def create(  # type: ignore[misc]
-    client: DnsZoneServiceStub,
-    **kwargs: Unpack[PublicCreateDnsKwargs],  # type: ignore[misc]
-) -> OperationResult:
-    ...
-
-
-def create(client: DnsZoneServiceStub, **kwargs):
+    if visibility is None:
+        req = partial(CreateDnsZoneRequest, public_visibility={})
+    else:
+        req = partial(CreateDnsZoneRequest, private_visibility=visibility)
     return {
         'CreateDns': MessageToDict(
-            client.Create(CreateDnsZoneRequest(**kwargs)),
+            client.Create(
+                req(
+                    folder_id=folder_id,
+                    zone=zone,
+                    name=name,
+                    description=description,
+                    labels=labels,
+                ),
+            ),
             preserving_proto_field_name=True,
         ),
     }
 
 
-@overload
-def update(
+def update_dns(
     client: DnsZoneServiceStub,
-    **kwargs: Unpack[PublicUpdateDnsKwargs],  # type: ignore[misc]
+    *,
+    dns_zone_id: str,
+    name: str | None = None,
+    description: str | None = None,
+    labels: Mapping[str, str] | None = None,
+    visibility: Visibility | None = None,
 ) -> OperationResult:
-    ...
-
-
-@overload
-def update(  # type: ignore[misc]
-    client: DnsZoneServiceStub,
-    **kwargs: Unpack[PrivateUpdateDnsKwargs],  # type: ignore[misc]
-) -> OperationResult:
-    ...
-
-
-def update(client: DnsZoneServiceStub, **kwargs):
+    if visibility is None:
+        req = partial(UpdateDnsZoneRequest, public_visibility={})
+    else:
+        req = partial(UpdateDnsZoneRequest, private_visibility=visibility)
     return {
         'UpdateDns': MessageToDict(
-            client.Update(UpdateDnsZoneRequest(**kwargs)),
+            client.Update(
+                req(
+                    dns_zone_id=dns_zone_id,
+                    name=name,
+                    description=description,
+                    labels=labels,
+                ),
+            ),
+            preserving_proto_field_name=True,
+        ),
+    }
+
+
+def delete_dns(
+    client: DnsZoneServiceStub,
+    dns_zone_id: str,
+) -> OperationResult:
+    return {
+        'DeleteDns': MessageToDict(
+            client.Delete(DeleteDnsZoneRequest(dns_zone_id=dns_zone_id)),
             preserving_proto_field_name=True,
         ),
     }
@@ -126,7 +122,6 @@ def main():
                         'required': True,
                     },
                 },
-                'default': {},
             },
             'state': {
                 'type': 'str',
@@ -160,40 +155,56 @@ def main():
     state = module.params.get('state')
     changed = False
 
+    with log_grpc_error(module):
+        curr_dns = get_resource_by_id(
+            dns_service,
+            GetDnsZoneRequest,
+            dns_zone_id=dns_zone_id,
+        ) or get_resource_by_name(
+            dns_service,
+            ListDnsZonesRequest,
+            folder_id=folder_id,
+            name=name,
+        )
+
     if state == 'present':
-        if not visibility:
+        if not curr_dns:
             with log_grpc_error(module):
                 result.update(
-                    create(
+                    create_dns(
                         dns_service,
                         folder_id=folder_id,
+                        name=module.params.get('name'),
+                        description=module.params.get('description'),
                         zone=module.params.get('zone'),
                         labels=module.params.get('labels'),
-                        public_visibility=visibility,
+                        visibility=visibility,
                     ),
                 )
         else:
             with log_grpc_error(module):
                 result.update(
-                    create(
+                    update_dns(
                         dns_service,
-                        folder_id=folder_id,
-                        zone=module.params.get('zone'),
+                        dns_zone_id=dns_zone_id,
+                        name=module.params.get('name'),
+                        description=module.params.get('description'),
                         labels=module.params.get('labels'),
-                        private_visibility=visibility,
+                        visibility=visibility,
                     ),
                 )
+        changed = True
+    elif state == 'absent':
+        if not curr_dns:
+            cast(Callable[..., NoReturn], module.fail_json)(
+                msg=f'dns zone {dns_zone_id or name} not found',
+            )
         with log_grpc_error(module):
             result.update(
-                update(
-                    dns_service,
-                    dns_zone_id=folder_id,
-                    public_visibility={},
-                ),
+                delete_dns(dns_service, curr_dns['id']),
             )
-
-    elif state == 'absent':
-        pass
+        changed = True
+    module.exit_json(**result, changed=changed)
 
 
 if __name__ == '__main__':

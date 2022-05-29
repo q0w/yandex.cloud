@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+from contextlib import suppress
 from typing import TYPE_CHECKING, Callable, Mapping, NoReturn, cast
 
-from ..module_utils.api_gateway import get_api_gateway_by_id, get_api_gateway_by_name
 from ..module_utils.basic import (
     default_arg_spec,
     default_required_if,
@@ -11,19 +11,20 @@ from ..module_utils.basic import (
     log_error,
     log_grpc_error,
 )
+from ..module_utils.resource import get_resource_by_id, get_resource_by_name
 
-try:
+with suppress(ImportError):
     from google.protobuf.json_format import MessageToDict
     from yandex.cloud.serverless.apigateway.v1.apigateway_service_pb2 import (
         CreateApiGatewayRequest,
         DeleteApiGatewayRequest,
+        GetApiGatewayRequest,
+        ListApiGatewayRequest,
         UpdateApiGatewayRequest,
     )
     from yandex.cloud.serverless.apigateway.v1.apigateway_service_pb2_grpc import (
         ApiGatewayServiceStub,
     )
-except ImportError:
-    pass
 
 if TYPE_CHECKING:
     from ..module_utils.types import Connectivity, OperationResult
@@ -152,10 +153,16 @@ def main():
     state = module.params.get('state')
 
     with log_grpc_error(module):
-        curr_api_gateway = get_api_gateway_by_id(
+        curr_api_gateway = get_resource_by_id(
             gateway_service,
-            api_gateway_id,
-        ) or get_api_gateway_by_name(gateway_service, folder_id, name)
+            GetApiGatewayRequest,
+            api_gateway_id=api_gateway_id,
+        ) or get_resource_by_name(
+            gateway_service,
+            ListApiGatewayRequest,
+            folder_id=folder_id,
+            name=name,
+        )
 
     if state == 'present':
         with log_error(module), open(

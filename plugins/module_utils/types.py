@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, Generic, TypeVar
+from typing import TYPE_CHECKING, Any, Dict, Generic, Mapping, TypeVar
 
 OperationResult = Dict[str, Dict[str, Any]]
 
@@ -32,3 +32,25 @@ if TYPE_CHECKING:
     class AccessBinding(TypedDict):
         role_id: str
         subject: Subject
+
+    class Resource(TypedDict, total=False):
+        id: Required[str]
+        folder_id: Required[str]
+        created_at: Required[str]
+        name: NotRequired[str]
+        description: NotRequired[str]
+        labels: NotRequired[Mapping[str, str]]
+        status: Required[str]
+        log_group_id: Required[str]
+
+    class Function(Resource):
+        http_invoke_url: Required[str]
+
+    class ApiGateway(Resource):
+        domain: Required[str]
+        attached_domains: NotRequired[list[Mapping[str, str | bool]]]
+        connectivity: NotRequired[Connectivity]
+
+    # TODO: add fields
+    class Dns(Resource):
+        pass

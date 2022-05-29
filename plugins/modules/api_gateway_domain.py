@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+from contextlib import suppress
 from typing import TYPE_CHECKING, Callable, NoReturn, cast
 
-from ..module_utils.api_gateway import get_api_gateway_by_name
 from ..module_utils.basic import (
     default_arg_spec,
     default_required_if,
@@ -10,18 +10,18 @@ from ..module_utils.basic import (
     init_sdk,
     log_grpc_error,
 )
+from ..module_utils.resource import get_resource_by_name
 
-try:
+with suppress(ImportError):
     from google.protobuf.json_format import MessageToDict
     from yandex.cloud.serverless.apigateway.v1.apigateway_service_pb2 import (
         AddDomainRequest,
+        ListApiGatewayRequest,
         RemoveDomainRequest,
     )
     from yandex.cloud.serverless.apigateway.v1.apigateway_service_pb2_grpc import (
         ApiGatewayServiceStub,
     )
-except ImportError:
-    pass
 
 if TYPE_CHECKING:
     from ..module_utils.types import OperationResult
@@ -105,8 +105,9 @@ def main():
 
     if not api_gateway_id and folder_id and name:
         with log_grpc_error(module):
-            api_gateway = get_api_gateway_by_name(
+            api_gateway = get_resource_by_name(
                 gateway_service,
+                ListApiGatewayRequest,
                 folder_id=folder_id,
                 name=name,
             )
