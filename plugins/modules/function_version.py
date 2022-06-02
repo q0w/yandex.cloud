@@ -12,8 +12,6 @@ from typing import (
     overload,
 )
 
-from google.protobuf.duration_pb2 import Duration
-
 from ..module_utils.basic import (
     default_arg_spec,
     default_required_if,
@@ -27,6 +25,7 @@ from ..module_utils.fn import tap
 from ..module_utils.function import get_function_by_name
 
 try:
+    from google.protobuf.duration_pb2 import Duration
     from google.protobuf.json_format import MessageToDict
     from yandex.cloud.serverless.functions.v1.function_service_pb2 import (
         CreateFunctionVersionRequest,
@@ -202,7 +201,7 @@ class _Version(TypedDict):
 @overload
 def _get_callable(
     params: _Package,
-    callables: dict[str, Callable[..., partial[dict[str, dict[str, Any]]]]],
+    callables: dict[str, Callable[..., partial[OperationResult]]],
 ) -> partial[OperationResult]:
     ...
 
@@ -210,7 +209,7 @@ def _get_callable(
 @overload
 def _get_callable(
     params: _Content,
-    callables: dict[str, Callable[..., partial[dict[str, dict[str, Any]]]]],
+    callables: dict[str, Callable[..., partial[OperationResult]]],
 ) -> partial[OperationResult]:
     ...
 
@@ -218,7 +217,7 @@ def _get_callable(
 @overload
 def _get_callable(
     params: _Version,
-    callables: dict[str, Callable[..., partial[dict[str, dict[str, Any]]]]],
+    callables: dict[str, Callable[..., partial[OperationResult]]],
 ) -> partial[OperationResult]:
     ...
 
