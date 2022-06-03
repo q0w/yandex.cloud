@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from typing import Callable, NoReturn, cast
+from contextlib import suppress
 
-from ..module_utils.api_gateway import get_api_gateway_by_name
 from ..module_utils.basic import (
     default_arg_spec,
     default_required_if,
@@ -14,16 +13,18 @@ from ..module_utils.resource import default_arg_spec as ab_default_arg_spec
 from ..module_utils.resource import (
     default_required_by,
     default_required_one_of,
+    get_resource_by_name,
     remove_access_bindings,
     set_access_bindings,
 )
 
-try:
+with suppress(ImportError):
+    from yandex.cloud.serverless.apigateway.v1.apigateway_service_pb2 import (
+        ListApiGatewayRequest,
+    )
     from yandex.cloud.serverless.apigateway.v1.apigateway_service_pb2_grpc import (
         ApiGatewayServiceStub,
     )
-except ImportError:
-    pass
 
 
 def main():
@@ -37,47 +38,44 @@ def main():
         supports_check_mode=True,
     )
 
-    sdk = init_sdk(module)
-    gateway_service = sdk.client(ApiGatewayServiceStub)
+    gateway_service = init_sdk(module).client(ApiGatewayServiceStub)
 
     result = {}
     changed = False
-    state = module.params.get('state')
-    api_gateway_id = module.params.get('resource_id')
-    folder_id = module.params.get('folder_id')
-    name = module.params.get('name')
-    access_bindings = module.params.get('access_bindings')
 
-    if not api_gateway_id and folder_id and name:
+    if (
+        not module.params['api_gateway_id']
+        and module.params['folder_id']
+        and module.params['name']
+    ):
         with log_grpc_error(module):
-            api_gateway = get_api_gateway_by_name(
+            api_gateway = get_resource_by_name(
                 gateway_service,
-                folder_id=folder_id,
-                name=name,
+                ListApiGatewayRequest,
+                folder_id=module.params['folder_id'],
+                name=module.params['name'],
             )
         if not api_gateway:
-            cast(Callable[..., NoReturn], module.fail_json)(
-                msg=f'Api gateway {name} not found',
-            )
-        api_gateway_id = api_gateway.get('id')
+            module.fail_json(f'Api gateway {module.params["name"]} not found')
+        module.params['api_gateway_id'] = api_gateway['id']
 
-    if state == 'present':
+    if module.params['state'] == 'present':
         with log_grpc_error(module):
             result.update(
                 set_access_bindings(
                     gateway_service,
-                    resource_id=api_gateway_id,
-                    access_bindings=access_bindings,
+                    resource_id=module.params['api_gateway_id'],
+                    access_bindings=module.params['access_bindings'],
                 ),
             )
         changed = True
-    elif state == 'absent':
+    elif module.params['state'] == 'absent':
         with log_grpc_error(module):
             result.update(
                 remove_access_bindings(
                     gateway_service,
-                    resource_id=api_gateway_id,
-                    access_bindings=access_bindings,
+                    resource_id=module.params['api_gateway_id'],
+                    access_bindings=module.params['access_bindings'],
                 ),
             )
         changed = True
