@@ -1,16 +1,8 @@
 from __future__ import annotations
 
-from functools import partial
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Mapping,
-    NoReturn,
-    TypedDict,
-    cast,
-    overload,
-)
+import zipfile
+from contextlib import suppress
+from typing import TYPE_CHECKING, Mapping
 
 from ..module_utils.basic import (
     default_arg_spec,
@@ -21,10 +13,9 @@ from ..module_utils.basic import (
     log_grpc_error,
     validate_zip,
 )
-from ..module_utils.fn import tap
 from ..module_utils.function import get_function_by_name
 
-try:
+with suppress(ImportError):
     from google.protobuf.duration_pb2 import Duration
     from google.protobuf.json_format import MessageToDict
     from yandex.cloud.serverless.functions.v1.function_service_pb2 import (
@@ -33,30 +24,9 @@ try:
     from yandex.cloud.serverless.functions.v1.function_service_pb2_grpc import (
         FunctionServiceStub,
     )
-except ImportError:
-    pass
 
 if TYPE_CHECKING:
-    from typing_extensions import NotRequired, Required
-
-    from ..module_utils.types import Connectivity, OperationResult
-
-    class Package(TypedDict, total=False):
-        bucket_name: Required[str]
-        object_name: Required[str]
-        sha256: NotRequired[str]
-
-
-class Resources(TypedDict):
-    memory: int
-
-
-# TODO: total=false?
-class Secret(TypedDict):
-    id: str
-    version_id: str
-    key: str
-    environment_variable: str
+    from ..module_utils.types import OperationResult
 
 
 def create_version_by_package(
@@ -65,16 +35,16 @@ def create_version_by_package(
     function_id: str,
     runtime: str,
     entrypoint: str,
-    resources: Resources,
+    resources: Mapping[str, int],
     execution_timeout: Duration,
     service_account_id: str | None = None,
-    package: Package,
+    package: Mapping[str, str],
     description: str | None = None,
     environment: Mapping[str, str] | None = None,
     tag: list[str] | None = None,
-    connectivity: Connectivity | None = None,
+    connectivity: Mapping[str, str | list[str]] | None = None,
     named_service_accounts: Mapping[str, str] | None = None,
-    secrets: list[Secret] | None = None,
+    secrets: list[Mapping[str, str]] | None = None,
 ) -> OperationResult:
     return {
         'CreateFunctionVersion': MessageToDict(
@@ -106,19 +76,17 @@ def create_version_by_content(
     function_id: str,
     runtime: str,
     entrypoint: str,
-    resources: Resources,
+    resources: Mapping[str, int],
     execution_timeout: Duration,
     service_account_id: str | None = None,
-    content_file: str,
+    content: bytes,
     description: str | None = None,
     environment: Mapping[str, str] | None = None,
     tag: list[str] | None = None,
-    connectivity: Connectivity | None = None,
+    connectivity: Mapping[str, str | list[str]] | None = None,
     named_service_accounts: Mapping[str, str] | None = None,
-    secrets: list[Secret] | None = None,
+    secrets: list[Mapping[str, str]] | None = None,
 ) -> OperationResult:
-    with open(content_file, 'rb') as f:
-        content = f.read()
     return {
         'CreateFunctionVersion': MessageToDict(
             client.CreateVersion(
@@ -149,16 +117,16 @@ def create_version_by_version_id(
     function_id: str,
     runtime: str,
     entrypoint: str,
-    resources: Resources,
+    resources: Mapping[str, int],
     execution_timeout: Duration,
     service_account_id: str | None = None,
     version_id: str,
     description: str | None = None,
     environment: Mapping[str, str] | None = None,
     tag: list[str] | None = None,
-    connectivity: Connectivity | None = None,
+    connectivity: Mapping[str, str | list[str]] | None = None,
     named_service_accounts: Mapping[str, str] | None = None,
-    secrets: list[Secret] | None = None,
+    secrets: list[Mapping[str, str]] | None = None,
 ) -> OperationResult:
     return {
         'CreateFunctionVersion': MessageToDict(
@@ -184,53 +152,6 @@ def create_version_by_version_id(
     }
 
 
-class _Package(TypedDict, total=False):
-    bucket_name: str
-    object_name: str
-    sha256: str
-
-
-class _Content(TypedDict):
-    content: str
-
-
-class _Version(TypedDict):
-    version_id: str
-
-
-@overload
-def _get_callable(
-    params: _Package,
-    callables: dict[str, Callable[..., partial[OperationResult]]],
-) -> partial[OperationResult]:
-    ...
-
-
-@overload
-def _get_callable(
-    params: _Content,
-    callables: dict[str, Callable[..., partial[OperationResult]]],
-) -> partial[OperationResult]:
-    ...
-
-
-@overload
-def _get_callable(
-    params: _Version,
-    callables: dict[str, Callable[..., partial[OperationResult]]],
-) -> partial[OperationResult]:
-    ...
-
-
-def _get_callable(
-    params,
-    callables,
-):
-    for k, v in callables.items():
-        if params[k]:
-            return v(params[k])
-
-
 def main():
     argument_spec = default_arg_spec()
     required_if = default_required_if()
@@ -250,6 +171,7 @@ def main():
             'entrypoint': {'type': 'str', 'required': True},
             'description': {'type': 'str'},
             'execution_timeout': {'type': 'str', 'required': True},
+            'service_account_id': {'type': 'str'},
             'package': {
                 'type': 'dict',
                 'options': {
@@ -300,60 +222,93 @@ def main():
     sdk = init_sdk(module)
     function_service = sdk.client(FunctionServiceStub)
 
-    result: dict[str, Any] = {}
-    function_id = module.params.get('function_id')
-    folder_id = module.params.get('folder_id')
-    name = module.params.get('name')
+    result = {}
     execution_timeout = Duration()
-    with log_error(module):
+    with log_error(module, ValueError):
         execution_timeout.FromJsonString(module.params.get('execution_timeout'))
 
-    callables: dict[str, Callable[..., partial[OperationResult]]] = {
-        'package': lambda package: partial(create_version_by_package, package=package),
-        'content': lambda content: partial(
-            create_version_by_content,
-            content_file=tap(partial(validate_zip, module))(content),
-        ),
-        'version_id': lambda version_id: partial(
-            create_version_by_version_id,
-            version_id=version_id,
-        ),
-    }
-
-    f = _get_callable(module.params, callables)
-
-    if not function_id and folder_id and name:
+    if (
+        not module.params['function_id']
+        and module.params['folder_id']
+        and module.params['name']
+    ):
         with log_grpc_error(module):
             curr_function = get_function_by_name(
                 function_service,
-                folder_id=folder_id,
-                name=name,
+                folder_id=module.params['folder_id'],
+                name=module.params['name'],
             )
         if not curr_function:
-            cast(Callable[..., NoReturn], module.fail_json)(
-                msg=f'function {name} not found',
+            module.fail_json(f'function {module.params["name"]} not found')
+        module.params['function_id'] = curr_function['id']
+
+    if module.params['package'] is not None:
+        with log_grpc_error(module):
+            result.update(
+                create_version_by_package(
+                    function_service,
+                    function_id=module.params['function_id'],
+                    runtime=module.params['runtime'],
+                    entrypoint=module.params['entrypoint'],
+                    resources=module.params['resources'],
+                    execution_timeout=execution_timeout,
+                    service_account_id=module.params['service_account_id'],
+                    description=module.params['description'],
+                    environment=module.params['environment'],
+                    tag=module.params['tag'],
+                    connectivity=module.params['connectivity'],
+                    named_service_accounts=module.params['named_service_accounts'],
+                    secrets=module.params['secrets'],
+                    package=module.params['package'],
+                ),
             )
-        function_id = curr_function.get('id')
-
-    with log_grpc_error(module):
-        result.update(
-            f(
-                function_service,
-                function_id=function_id,
-                runtime=module.params.get('runtime'),
-                entrypoint=module.params.get('entrypoint'),
-                resources=module.params.get('resources'),
-                execution_timeout=execution_timeout,
-                service_account_id=module.params.get('service_account_id'),
-                description=module.params.get('description'),
-                environment=module.params.get('environment'),
-                tag=module.params.get('tag'),
-                connectivity=module.params.get('connectivity'),
-                named_service_accounts=module.params.get('named_service_accounts'),
-                secrets=module.params.get('secrets'),
-            ),
-        )
-
+    elif module.params['content'] is not None:
+        with log_error(module, FileNotFoundError, zipfile.BadZipfile):
+            validate_zip(module, module.params['content'])
+        with log_error(module, FileNotFoundError), open(
+            module.params['content'],
+            'rb',
+        ) as f:
+            module.params['content'] = f.read()
+        with log_grpc_error(module):
+            result.update(
+                create_version_by_content(
+                    function_service,
+                    function_id=module.params['function_id'],
+                    runtime=module.params['runtime'],
+                    entrypoint=module.params['entrypoint'],
+                    resources=module.params['resources'],
+                    execution_timeout=execution_timeout,
+                    service_account_id=module.params['service_account_id'],
+                    description=module.params['description'],
+                    environment=module.params['environment'],
+                    tag=module.params['tag'],
+                    connectivity=module.params['connectivity'],
+                    named_service_accounts=module.params['named_service_accounts'],
+                    secrets=module.params['secrets'],
+                    content=module.params['content'],
+                ),
+            )
+    elif module.params['version_id'] is not None:
+        with log_grpc_error(module):
+            result.update(
+                create_version_by_version_id(
+                    function_service,
+                    function_id=module.params['function_id'],
+                    runtime=module.params['runtime'],
+                    entrypoint=module.params['entrypoint'],
+                    resources=module.params['resources'],
+                    execution_timeout=execution_timeout,
+                    service_account_id=module.params['service_account_id'],
+                    description=module.params['description'],
+                    environment=module.params['environment'],
+                    tag=module.params['tag'],
+                    connectivity=module.params['connectivity'],
+                    named_service_accounts=module.params['named_service_accounts'],
+                    secrets=module.params['secrets'],
+                    version_id=module.params['version_id'],
+                ),
+            )
     changed = True
     module.exit_json(**result, changed=changed)
 

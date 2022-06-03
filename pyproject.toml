@@ -11,6 +11,7 @@ known_third_party = ["ansible"]
 add_imports = ["from __future__ import annotations"]
 
 [tool.mypy]
+mypy_path = "stubs"
 allow_redefinition = false
 check_untyped_defs = true
 ignore_errors = false
@@ -31,3 +32,4 @@ pythonVersion = "3.8"
 #typeCheckingMode = "strict"
 venvPath = "."
 venv = "venv"
+stubPath = "stubs"

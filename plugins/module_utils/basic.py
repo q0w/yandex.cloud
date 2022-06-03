@@ -4,15 +4,7 @@ import contextlib
 import json
 import traceback
 import zipfile
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Generator,
-    Iterable,
-    Mapping,
-    MutableMapping,
-    TypedDict,
-)
+from typing import TYPE_CHECKING, Any, Generator, Iterable, Mapping, TypedDict
 
 from ansible.module_utils.basic import AnsibleModule, missing_required_lib
 
@@ -29,7 +21,7 @@ if TYPE_CHECKING:
     from typing_extensions import NotRequired, Required, Unpack
 
     class ModuleParams(TypedDict, total=False):
-        argument_spec: Required[MutableMapping[str, Any]]
+        argument_spec: Required[Mapping[str, Any]]
         bypass_checks: NotRequired[bool]
         no_log: NotRequired[bool]
         mutually_exclusive: NotRequired[list[tuple[str, ...]]]
@@ -116,17 +108,14 @@ def log_grpc_error(module: AnsibleModule) -> Generator[None, None, None]:
 
 
 @contextlib.contextmanager
-def log_error(module: AnsibleModule) -> Generator[None, None, None]:
+def log_error(module: AnsibleModule, *exceptions) -> Generator[None, None, None]:
     try:
         yield
-    except Exception as e:
+    except exceptions as e:
         module.fail_json(msg=str(e))
 
 
 def validate_zip(module: AnsibleModule, filename: str) -> None:
-    try:
-        with zipfile.ZipFile(filename, 'r') as f:
-            if f.testzip():
-                module.fail_json(msg=f'{filename} is not valid zip file')
-    except (FileNotFoundError, zipfile.BadZipfile) as e:
-        module.fail_json(msg=str(e))
+    with zipfile.ZipFile(filename, 'r') as f:
+        if f.testzip():
+            module.fail_json(msg=f'{filename} is not valid zip file')

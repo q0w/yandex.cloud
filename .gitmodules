@@ -1,0 +1,3 @@
+[submodule "stubs"]
+	path = stubs
+	url = git@github.com:q0w/ansible-stubs.git
