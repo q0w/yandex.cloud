@@ -1,95 +1,25 @@
 from __future__ import annotations
 
-from typing import Mapping
+from contextlib import suppress
+from typing import NoReturn
 
-from ..module_utils.basic import (
-    default_arg_spec,
-    default_required_if,
-    init_module,
-    init_sdk,
-    log_grpc_error,
-)
-from ..module_utils.function import get_function_by_id, get_function_by_name
-from ..module_utils.types import OperationResult
+from ..module_utils.basic import default_arg_spec
+from ..module_utils.basic import default_required_if
+from ..module_utils.basic import init_module
+from ..module_utils.basic import init_sdk
+from ..module_utils.basic import log_grpc_error
 
-try:
+with suppress(ImportError):
     from google.protobuf.json_format import MessageToDict
-    from yandex.cloud.serverless.functions.v1.function_service_pb2 import (
-        CreateFunctionRequest,
-        DeleteFunctionRequest,
-        UpdateFunctionRequest,
-    )
-    from yandex.cloud.serverless.functions.v1.function_service_pb2_grpc import (
-        FunctionServiceStub,
-    )
-except ImportError:
-    pass
+    from yandex.cloud.serverless.functions.v1.function_service_pb2 import CreateFunctionRequest
+    from yandex.cloud.serverless.functions.v1.function_service_pb2 import DeleteFunctionRequest
+    from yandex.cloud.serverless.functions.v1.function_service_pb2 import GetFunctionRequest
+    from yandex.cloud.serverless.functions.v1.function_service_pb2 import ListFunctionsRequest
+    from yandex.cloud.serverless.functions.v1.function_service_pb2 import UpdateFunctionRequest
+    from yandex.cloud.serverless.functions.v1.function_service_pb2_grpc import FunctionServiceStub
 
 
-def delete_function(
-    client: FunctionServiceStub,
-    function_id: str,
-) -> OperationResult:
-    return {
-        'DeleteFunction': MessageToDict(
-            client.Delete(DeleteFunctionRequest(function_id=function_id)),
-            preserving_proto_field_name=True,
-        ),
-    }
-
-
-def create_function(
-    client: FunctionServiceStub,
-    *,
-    folder_id: str,
-    name: str | None = None,
-    description: str | None = None,
-    labels: Mapping[str, str] | None = None,
-) -> OperationResult:
-    return {
-        'CreateFunction': MessageToDict(
-            client.Create(
-                CreateFunctionRequest(
-                    folder_id=folder_id,
-                    name=name,
-                    description=description,
-                    labels=labels,
-                ),
-            ),
-            preserving_proto_field_name=True,
-        ),
-    }
-
-
-# TODO: add update_mask
-def update_function(
-    client: FunctionServiceStub,
-    *,
-    function_id: str,
-    name: str | None = None,
-    description: str | None = None,
-    labels: Mapping[str, str] | None = None,
-) -> OperationResult:
-    return {
-        'UpdateFunction': MessageToDict(
-            client.Update(
-                UpdateFunctionRequest(
-                    function_id=function_id,
-                    name=name,
-                    description=description,
-                    labels=labels,
-                ),
-            ),
-            preserving_proto_field_name=True,
-        ),
-    }
-
-
-def main() -> None:
-    # TODO: NoReturn
-    # TODO: manipulate "changed" state after success
-    # TODO: check_mode
-    # TODO: add arg_spec labels, update_mask
+def main() -> NoReturn:
     argument_spec = default_arg_spec()
     required_if = default_required_if()
     argument_spec.update(
@@ -98,6 +28,7 @@ def main() -> None:
             'function_id': {'type': 'str'},
             'folder_id': {'type': 'str'},
             'description': {'type': 'str'},
+            'labels': {'type': 'dict', 'elements': 'str'},
             'state': {
                 'type': 'str',
                 'default': 'present',
@@ -118,53 +49,51 @@ def main() -> None:
         required_one_of=required_one_of,
         required_together=required_together,
     )
-    sdk = init_sdk(module)
-    function_service = sdk.client(FunctionServiceStub)
+    client: FunctionServiceStub = init_sdk(module).client(FunctionServiceStub)
     result = {}
 
-    function_id = module.params.get('function_id')
-    folder_id = module.params.get('folder_id')
-    name = module.params.get('name')
+    state = module.params['state']
+    function_id = module.params['function_id']
+    folder_id = module.params['folder_id']
+    name = module.params['name']
+    description = module.params['description']
+    labels = module.params['labels']
+
+    # check if the function exists
+    curr_function = None
     with log_grpc_error(module):
-        curr_function = get_function_by_id(
-            function_service,
-            function_id=function_id,
-        ) or get_function_by_name(
-            function_service,
-            folder_id=folder_id,
-            name=name,
-        )
-
-    if module.params.get('state') == 'present':
-        if curr_function:
-            with log_grpc_error(module):
-                resp = update_function(
-                    function_service,
-                    function_id=curr_function.get('id')
-                    or module.params.get('function_id'),
-                    # TODO: 'update_mask'
-                    name=module.params.get('name'),
-                    description=module.params.get('description'),
-                    labels=module.params.get('labels'),
-                )
+        if function_id:
+            curr_function = client.Get(GetFunctionRequest(function_id=function_id))
         else:
-            with log_grpc_error(module):
-                resp = create_function(
-                    function_service,
-                    folder_id=module.params.get('folder_id'),
-                    name=module.params.get('name'),
+            functions = client.List(ListFunctionsRequest(folder_id=folder_id, filter=f'name="{name}"')).functions
+            if functions:
+                curr_function = functions[0]
+
+    with log_grpc_error(module):
+        if state == 'present':
+            if curr_function:
+                resp = client.Update(
+                    UpdateFunctionRequest(
+                        function_id=curr_function.id,
+                        name=name,
+                        description=description,
+                        labels=labels,
+                    ),
                 )
-        result.update(resp)
+                result.update(MessageToDict(resp))
+            else:
+                resp = client.Create(
+                    CreateFunctionRequest(folder_id=folder_id, name=name, description=description, labels=labels),
+                )
+                result.update(MessageToDict(resp))
 
-    elif module.params.get('state') == 'absent' and curr_function is not None:
-        with log_grpc_error(module):
-            resp = delete_function(
-                function_service,
-                curr_function.get('id') or module.params.get('function_id'),
-            )
-        result.update(resp)
+        elif state == 'absent':
+            if not curr_function:
+                module.fail_json(f'function {function_id or name} not found')
+            resp = client.Delete(DeleteFunctionRequest(function_id=curr_function.id))
+            result.update(MessageToDict(resp))
 
-    module.exit_json(**result)
+    module.exit_json(**result, changed=True)
 
 
 if __name__ == '__main__':

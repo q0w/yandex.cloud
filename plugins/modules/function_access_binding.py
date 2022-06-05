@@ -1,32 +1,29 @@
 from __future__ import annotations
 
-from typing import Callable, NoReturn, cast
+from contextlib import suppress
+from typing import NoReturn
 
-from ..module_utils.basic import (
-    default_arg_spec,
-    default_required_if,
-    init_module,
-    init_sdk,
-    log_grpc_error,
-)
-from ..module_utils.function import get_function_by_name
+from ..module_utils.basic import default_arg_spec
+from ..module_utils.basic import default_required_if
+from ..module_utils.basic import init_module
+from ..module_utils.basic import init_sdk
+from ..module_utils.basic import log_error
+from ..module_utils.basic import log_grpc_error
+from ..module_utils.basic import NotFound
+from ..module_utils.function import get_function_id
 from ..module_utils.resource import default_arg_spec as ab_default_arg_spec
-from ..module_utils.resource import (
-    default_required_by,
-    default_required_one_of,
-    remove_access_bindings,
-    set_access_bindings,
-)
+from ..module_utils.resource import default_required_by
+from ..module_utils.resource import default_required_one_of
+from ..module_utils.resource import remove_access_bindings
+from ..module_utils.resource import set_access_bindings
+from ..module_utils.resource import to_ab
 
-try:
-    from yandex.cloud.serverless.functions.v1.function_service_pb2_grpc import (
-        FunctionServiceStub,
-    )
-except ImportError:
-    pass
+with suppress(ImportError):
+    from google.protobuf.json_format import MessageToDict
+    from yandex.cloud.serverless.functions.v1.function_service_pb2_grpc import FunctionServiceStub
 
 
-def main():
+def main() -> NoReturn:
     argument_spec = {**default_arg_spec(), **ab_default_arg_spec()}
     required_if = default_required_if()
 
@@ -37,52 +34,28 @@ def main():
         required_by=default_required_by(),
         supports_check_mode=True,
     )
-    sdk = init_sdk(module)
-    function_service = sdk.client(FunctionServiceStub)
-
+    client: FunctionServiceStub = init_sdk(module).client(FunctionServiceStub)
     result = {}
-    changed = False
-    state = module.params.get('state')
-    function_id = module.params.get('resource_id')
-    folder_id = module.params.get('folder_id')
-    name = module.params.get('name')
-    access_bindings = module.params.get('access_bindings')
 
-    if not function_id and folder_id and name:
-        with log_grpc_error(module):
-            curr_function = get_function_by_name(
-                function_service,
-                folder_id=folder_id,
-                name=name,
-            )
-        if not curr_function:
-            cast(Callable[..., NoReturn], module.fail_json)(
-                msg=f'function {name} not found',
-            )
-        function_id = curr_function.get('id')
+    state = module.params['state']
+    function_id = module.params['function_id']
+    folder_id = module.params['folder_id']
+    name = module.params['name']
+    abs = [to_ab(ab) for ab in module.params['access_bindings']]
 
-    if state == 'present':
-        with log_grpc_error(module):
-            result.update(
-                set_access_bindings(
-                    function_service,
-                    resource_id=function_id,
-                    access_bindings=access_bindings,
-                ),
-            )
-        changed = True
-    elif state == 'absent':
-        with log_grpc_error(module):
-            result.update(
-                remove_access_bindings(
-                    function_service,
-                    resource_id=function_id,
-                    access_bindings=access_bindings,
-                ),
-            )
-        changed = True
+    if not function_id:
+        with log_error(module, NotFound), log_grpc_error(module):
+            function_id = get_function_id(client, folder_id, name)
 
-    module.exit_json(**result, changed=changed)
+    with log_grpc_error(module):
+        if state == 'present':
+            resp = set_access_bindings(client, function_id, abs)
+            result.update(MessageToDict(resp))
+        elif state == 'absent':
+            resp = remove_access_bindings(client, function_id, abs)
+            result.update(MessageToDict(resp))
+
+    module.exit_json(**result, changed=True)
 
 
 if __name__ == '__main__':

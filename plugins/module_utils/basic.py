@@ -4,9 +4,15 @@ import contextlib
 import json
 import traceback
 import zipfile
-from typing import TYPE_CHECKING, Any, Generator, Iterable, Mapping, TypedDict
+from typing import Any
+from typing import Generator
+from typing import Iterable
+from typing import Mapping
+from typing import TYPE_CHECKING
+from typing import TypedDict
 
-from ansible.module_utils.basic import AnsibleModule, missing_required_lib
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.basic import missing_required_lib
 
 HAS_YANDEX = False
 try:
@@ -54,8 +60,7 @@ def _get_auth_settings(
                 config['service_account_key'] = json.loads(sa_content)
         else:
             module.fail_json(
-                "Either 'sa_path' or 'sa_content' must be set"
-                " when 'auth_kind' is set to 'sa_file'",
+                "Either 'sa_path' or 'sa_content' must be set" " when 'auth_kind' is set to 'sa_file'",
             )
 
     return config
@@ -88,7 +93,7 @@ def init_sdk(module: AnsibleModule) -> yandexcloud.SDK:
     )
 
 
-def init_module(**params: Unpack[ModuleParams]) -> AnsibleModule:   # type: ignore[misc]
+def init_module(**params: Unpack[ModuleParams]) -> AnsibleModule:  # type: ignore[misc]
     module = AnsibleModule(**params)
     if not HAS_YANDEX:
         module.fail_json(
@@ -119,3 +124,7 @@ def validate_zip(module: AnsibleModule, filename: str) -> None:
     with zipfile.ZipFile(filename, 'r') as f:
         if f.testzip():
             module.fail_json(msg=f'{filename} is not valid zip file')
+
+
+class NotFound(ValueError):
+    ...

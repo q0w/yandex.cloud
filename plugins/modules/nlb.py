@@ -1,27 +1,22 @@
 from __future__ import annotations
 
 from contextlib import suppress
-from typing import TYPE_CHECKING, List, Literal, Mapping, TypedDict, TypeVar, overload
+from typing import Literal
+from typing import NoReturn
 
 from ansible.module_utils.basic import AnsibleModule
 
-from ..module_utils.basic import (
-    default_arg_spec,
-    default_required_if,
-    init_module,
-    init_sdk,
-    log_grpc_error,
-)
+from ..module_utils.basic import default_arg_spec
+from ..module_utils.basic import default_required_if
+from ..module_utils.basic import init_module
+from ..module_utils.basic import init_sdk
+from ..module_utils.basic import log_grpc_error
 
 with suppress(ImportError):
-    from google.protobuf.duration_pb2 import Duration
     from google.protobuf.json_format import MessageToDict
-    from yandex.cloud.loadbalancer.v1.network_load_balancer_service_pb2 import (
-        CreateNetworkLoadBalancerRequest,
-    )
-    from yandex.cloud.loadbalancer.v1.network_load_balancer_service_pb2_grpc import (
-        NetworkLoadBalancerServiceStub,
-    )
+    from yandex.cloud.loadbalancer.v1.network_load_balancer_pb2 import AttachedTargetGroup
+    from yandex.cloud.loadbalancer.v1.network_load_balancer_service_pb2 import CreateNetworkLoadBalancerRequest
+    from yandex.cloud.loadbalancer.v1.network_load_balancer_service_pb2_grpc import NetworkLoadBalancerServiceStub
 
 # FIXME: "internal" is not available
 NetworkLoadBalancerType = Literal['EXTERNAL']
@@ -29,119 +24,12 @@ Protocol = Literal['TCP', 'UDP']
 IpVersion = Literal['IPV4', 'IPV6']
 
 
-if TYPE_CHECKING:
-    from typing_extensions import NotRequired, Required, TypeGuard
-
-    class ExternalAddressSpec(TypedDict):
-        address: str
-        ip_version: IpVersion
-
-    class InternalAddressSpec(ExternalAddressSpec):
-        subnet_id: str
-
-    class _ListenerSpec(TypedDict, total=False):
-        name: Required[str]
-        port: Required[int]
-        protocol: Required[Protocol]
-        target_port: NotRequired[int]
-
-    class ExternalListenerSpec(_ListenerSpec):
-        external_address_spec: Required[ExternalAddressSpec]
-
-    class InternalListenerSpec(_ListenerSpec):
-        internal_address_spec: Required[InternalAddressSpec]
-
-    class TcpOptions(TypedDict):
-        port: int
-
-    class HttpOptions(TcpOptions, total=False):
-        path: NotRequired[str]
-
-    class _HealthCheck(TypedDict, total=False):
-        name: Required[str]
-        interval: NotRequired[Duration]
-        timeout: NotRequired[Duration]
-        unhealthy_threshold: Required[int]
-        healthy_threshold: Required[int]
-
-    H = TypeVar('H', bound=_HealthCheck)
-    HealthCheckList = List[H]
-
-    class TcpHealthCheck(_HealthCheck):
-        tcp_options: Required[TcpOptions]
-
-    class HttpHealthCheck(_HealthCheck):
-        http_options: Required[HttpOptions]
-
-    class AttachedTargetGroup(TypedDict, total=False):
-        target_group_id: Required[str]
-        health_checks: Required[
-            HealthCheckList[TcpHealthCheck] | HealthCheckList[HttpHealthCheck]
-        ]
-
-
-@overload
-def is_health_check_list(
-    val: list[TcpHealthCheck],
-) -> TypeGuard[HealthCheckList[TcpHealthCheck]]:
-    ...
-
-
-@overload
-def is_health_check_list(
-    val: list[HttpHealthCheck],
-) -> TypeGuard[HealthCheckList[HttpHealthCheck]]:
-    ...
-
-
-def is_health_check_list(
-    val: list[TcpHealthCheck] | list[HttpHealthCheck],
-) -> TypeGuard[HealthCheckList[TcpHealthCheck]] | TypeGuard[
-    HealthCheckList[HttpHealthCheck]
-]:
-    return len(val) == 1
-
-
-def validate_attached_target_group(
-    module: AnsibleModule,
-    group: AttachedTargetGroup,
-) -> None:
-    if not is_health_check_list(group['health_checks']):
+def validate_attached_target_group(module: AnsibleModule, group: AttachedTargetGroup) -> None:
+    if not len(group.health_checks) == 1:
         module.fail_json('health_checks: the number of elements must be exactly 1')
 
 
-def create(
-    client: NetworkLoadBalancerServiceStub,
-    *,
-    folder_id: str,
-    description: str | None = None,
-    labels: Mapping[str, str] | None = None,
-    region_id: str | None = None,
-    type: NetworkLoadBalancerType = 'EXTERNAL',
-    listener_specs: list[InternalListenerSpec]
-    | list[ExternalListenerSpec]
-    | None = None,
-    attached_target_groups: list[AttachedTargetGroup] | None = None,
-):
-    return {
-        'CreateNetworkLoadBalancer': MessageToDict(
-            client.Create(
-                CreateNetworkLoadBalancerRequest(
-                    folder_id=folder_id,
-                    description=description,
-                    labels=labels,
-                    region_id=region_id,
-                    type=type,
-                    listener_specs=listener_specs,
-                    attached_target_groups=attached_target_groups,
-                ),
-            ),
-            preserving_proto_field_name=True,
-        ),
-    }
-
-
-def main():
+def main() -> NoReturn:
     argument_spec = default_arg_spec()
     argument_spec.update(
         {
@@ -232,13 +120,16 @@ def main():
         mutually_exclusive=mutually_exclusive,
         supports_check_mode=True,
     )
-    sdk = init_sdk(module)
-    nlb_service = sdk.client(NetworkLoadBalancerServiceStub)
-
+    client: NetworkLoadBalancerServiceStub = init_sdk(module).client(NetworkLoadBalancerServiceStub)
     result = {}
-    changed = False
-    folder_id = module.params.get('folder_id')
-    attached_target_groups: list[AttachedTargetGroup] = module.params.get(
+
+    folder_id = module.params['folder_id']
+    description = module.params['description']
+    labels = module.params['labels']
+    region_id = module.params['region_id']
+    type = module.params['type']
+    listener_specs = module.params['listener_specs']
+    attached_target_groups = module.params.get(
         'attached_target_groups',
     )
     if attached_target_groups:
@@ -246,21 +137,20 @@ def main():
             validate_attached_target_group(module, g)
 
     with log_grpc_error(module):
-        result.update(
-            create(
-                nlb_service,
+        resp = client.Create(
+            CreateNetworkLoadBalancerRequest(
                 folder_id=folder_id,
-                description=module.params.get('description'),
-                labels=module.params.get('labels'),
-                region_id=module.params.get('region_id'),
-                type=module.params.get('type'),
-                listener_specs=module.params.get('listener_specs'),
-                attached_target_groups=module.params.get('attached_target_groups'),
+                description=description,
+                labels=labels,
+                region_id=region_id,
+                type=type,
+                listener_specs=listener_specs,
+                attached_target_groups=attached_target_groups,
             ),
         )
-        changed = True
+        result.update(MessageToDict(resp))
 
-    module.exit_json(**result, changed=changed)
+    module.exit_json(**result, changed=True)
 
 
 if __name__ == '__main__':

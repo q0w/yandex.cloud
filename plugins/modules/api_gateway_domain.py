@@ -1,65 +1,25 @@
 from __future__ import annotations
 
 from contextlib import suppress
-from typing import TYPE_CHECKING, Callable, NoReturn, cast
+from typing import NoReturn
 
-from ..module_utils.basic import (
-    default_arg_spec,
-    default_required_if,
-    init_module,
-    init_sdk,
-    log_grpc_error,
-)
-from ..module_utils.resource import get_resource_by_name
+from ..module_utils.basic import default_arg_spec
+from ..module_utils.basic import default_required_if
+from ..module_utils.basic import init_module
+from ..module_utils.basic import init_sdk
+from ..module_utils.basic import log_error
+from ..module_utils.basic import log_grpc_error
+from ..module_utils.basic import NotFound
 
 with suppress(ImportError):
     from google.protobuf.json_format import MessageToDict
-    from yandex.cloud.serverless.apigateway.v1.apigateway_service_pb2 import (
-        AddDomainRequest,
-        ListApiGatewayRequest,
-        RemoveDomainRequest,
-    )
-    from yandex.cloud.serverless.apigateway.v1.apigateway_service_pb2_grpc import (
-        ApiGatewayServiceStub,
-    )
-
-if TYPE_CHECKING:
-    from ..module_utils.types import OperationResult
+    from module_utils.api_gateway import get_api_gateway_id
+    from yandex.cloud.serverless.apigateway.v1.apigateway_service_pb2 import AddDomainRequest
+    from yandex.cloud.serverless.apigateway.v1.apigateway_service_pb2 import RemoveDomainRequest
+    from yandex.cloud.serverless.apigateway.v1.apigateway_service_pb2_grpc import ApiGatewayServiceStub
 
 
-def add_domain(
-    client: ApiGatewayServiceStub,
-    *,
-    api_gateway_id: str,
-    domain_id: str,
-) -> OperationResult:
-    return {
-        'AddDomain': MessageToDict(
-            client.AddDomain(
-                AddDomainRequest(api_gateway_id=api_gateway_id, domain_id=domain_id),
-            ),
-            preserving_proto_field_name=True,
-        ),
-    }
-
-
-def remove_domain(
-    client: ApiGatewayServiceStub,
-    *,
-    api_gateway_id: str,
-    domain_id: str,
-) -> OperationResult:
-    return {
-        'RemoveDomain': MessageToDict(
-            client.RemoveDomain(
-                RemoveDomainRequest(api_gateway_id=api_gateway_id, domain_id=domain_id),
-            ),
-            preserving_proto_field_name=True,
-        ),
-    }
-
-
-def main():
+def main() -> NoReturn:
     argument_spec = default_arg_spec()
     required_if = default_required_if()
 
@@ -92,53 +52,29 @@ def main():
         required_together=required_together,
         supports_check_mode=True,
     )
-    sdk = init_sdk(module)
-    gateway_service = sdk.client(ApiGatewayServiceStub)
-
+    client: ApiGatewayServiceStub = init_sdk(module).client(ApiGatewayServiceStub)
     result = {}
-    api_gateway_id = module.params.get('api_gateway_id')
-    domain_id = module.params.get('domain_id')
-    folder_id = module.params.get('folder_id')
-    name = module.params.get('name')
-    changed = False
-    state = module.params.get('state')
 
-    if not api_gateway_id and folder_id and name:
-        with log_grpc_error(module):
-            api_gateway = get_resource_by_name(
-                gateway_service,
-                ListApiGatewayRequest,
-                folder_id=folder_id,
-                name=name,
-            )
-        if not api_gateway:
-            cast(Callable[..., NoReturn], module.fail_json)(
-                msg=f'Api gateway {name} not found',
-            )
-        api_gateway_id = api_gateway.get('id')
+    state = module.params['state']
+    ag_id = module.params['api_gateway_id']
+    domain_id = module.params['domain_id']
+    folder_id = module.params['folder_id']
+    name = module.params['name']
 
-    if state == 'present':
-        with log_grpc_error(module):
-            result.update(
-                add_domain(
-                    gateway_service,
-                    api_gateway_id=api_gateway_id,
-                    domain_id=domain_id,
-                ),
-            )
-        changed = True
-    elif state == 'absent':
-        with log_grpc_error(module):
-            result.update(
-                remove_domain(
-                    gateway_service,
-                    api_gateway_id=api_gateway_id,
-                    domain_id=domain_id,
-                ),
-            )
-        changed = True
+    if not ag_id:
+        with log_error(module, NotFound), log_grpc_error(module):
+            ag_id = get_api_gateway_id(client, folder_id, name)
 
-    module.exit_json(**result, changed=changed)
+    with log_grpc_error(module):
+        if state == 'present':
+            resp = client.AddDomain(AddDomainRequest(api_gateway_id=ag_id, domain_id=domain_id))
+            result.update(MessageToDict(resp))
+
+        elif state == 'absent':
+            resp = client.RemoveDomain(RemoveDomainRequest(api_gateway_id=ag_id, domain_id=domain_id))
+            result.update(MessageToDict(resp))
+
+    module.exit_json(**result, changed=True)
 
 
 if __name__ == '__main__':

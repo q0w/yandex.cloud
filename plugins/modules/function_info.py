@@ -1,162 +1,47 @@
 from __future__ import annotations
 
-from typing import Any, Callable, Generator
+from contextlib import suppress
+from typing import Any
+from typing import Callable
+from typing import Dict
+from typing import Generator
+from typing import Mapping
+from typing import NoReturn
 
-from ..module_utils.basic import (
-    default_arg_spec,
-    default_required_if,
-    init_module,
-    init_sdk,
-    log_grpc_error,
-)
-from ..module_utils.function import (
-    get_function_by_name,
-    list_function_versions_by_folder,
-    list_function_versions_by_function,
-)
-from ..module_utils.types import OperationResult
+from ..module_utils.basic import default_arg_spec
+from ..module_utils.basic import default_required_if
+from ..module_utils.basic import init_module
+from ..module_utils.basic import init_sdk
+from ..module_utils.basic import log_error
+from ..module_utils.basic import log_grpc_error
+from ..module_utils.basic import NotFound
+from ..module_utils.function import get_function_id
 
-try:
+with suppress(ImportError):
     from google.protobuf.json_format import MessageToDict
     from yandex.cloud.access.access_pb2 import ListAccessBindingsRequest
-    from yandex.cloud.serverless.functions.v1.function_service_pb2 import (
-        GetFunctionVersionRequest,
-        ListFunctionOperationsRequest,
-        ListFunctionTagHistoryRequest,
-        ListRuntimesRequest,
-        ListScalingPoliciesRequest,
-    )
-    from yandex.cloud.serverless.functions.v1.function_service_pb2_grpc import (
-        FunctionServiceStub,
-    )
-except ImportError:
-    pass
+    from yandex.cloud.serverless.functions.v1.function_service_pb2 import ListFunctionOperationsRequest
+    from yandex.cloud.serverless.functions.v1.function_service_pb2 import ListFunctionsVersionsRequest
+    from yandex.cloud.serverless.functions.v1.function_service_pb2 import ListFunctionTagHistoryRequest
+    from yandex.cloud.serverless.functions.v1.function_service_pb2 import ListRuntimesRequest
+    from yandex.cloud.serverless.functions.v1.function_service_pb2 import ListScalingPoliciesRequest
+    from yandex.cloud.serverless.functions.v1.function_service_pb2_grpc import FunctionServiceStub
 
 
-def get_version(
-    client: FunctionServiceStub,
-    function_version_id: str,
-) -> dict[str, Any]:
-    return MessageToDict(
-        client.GetVersion(
-            GetFunctionVersionRequest(
-                function_version_id=function_version_id,
-            ),
-        ),
-        preserving_proto_field_name=True,
-    )
+ListResult = Dict[str, Dict[str, Any]]
 
 
-# TODO: check page_size, page_token
-def list_scaling_policies(
-    client: FunctionServiceStub,
-    *,
-    function_id: str,
-    page_size: int | None = None,
-    page_token: str | None = None,
-) -> OperationResult:
-    return {
-        'ListScalingPolicies': MessageToDict(
-            client.ListScalingPolicies(
-                ListScalingPoliciesRequest(
-                    function_id=function_id,
-                    page_size=page_size,
-                    page_token=page_token,
-                ),
-            ),
-            preserving_proto_field_name=True,
-        ),
-    }
-
-
-# TODO: check page_size, page_token, filter
-def list_tag_history(
-    client: FunctionServiceStub,
-    *,
-    function_id: str,
-    tag: str = '$latest',
-    page_size: int | None = None,
-    page_token: str | None = None,
-    filter: str | None = None,
-) -> OperationResult:
-    return {
-        'ListFunctionTagHistory': MessageToDict(
-            client.ListTagHistory(
-                ListFunctionTagHistoryRequest(
-                    function_id=function_id,
-                    tag=tag,
-                    page_size=page_size,
-                    page_token=page_token,
-                    filter=filter,
-                ),
-            ),
-        ),
-    }
-
-
-def list_runtimes(client: FunctionServiceStub) -> OperationResult:
-    return {
-        'ListRuntimes': MessageToDict(
-            client.ListRuntimes(ListRuntimesRequest()),
-        ),
-    }
-
-
-# TODO: check page_size, page_token
-def list_access_bindings(
-    client: FunctionServiceStub,
-    *,
-    function_id: str,
-    page_size: int | None = None,
-    page_token: str | None = None,
-) -> OperationResult:
-    return {
-        'ListAccessBindings': MessageToDict(
-            client.ListAccessBindings(
-                ListAccessBindingsRequest(
-                    resource_id=function_id,
-                    page_size=page_size,
-                    page_token=page_token,
-                ),
-            ),
-        ),
-    }
-
-
-def list_operations(
-    client: FunctionServiceStub,
-    *,
-    function_id: str,
-    page_size: int | None = None,
-    page_token: str | None = None,
-    filter: str | None = None,
-) -> OperationResult:
-    return {
-        'ListFunctionOperations': MessageToDict(
-            client.ListOperations(
-                ListFunctionOperationsRequest(
-                    function_id=function_id,
-                    page_size=page_size,
-                    page_token=page_token,
-                    filter=filter,
-                ),
-            ),
-        ),
-    }
-
-
-def _iter_callables(
-    key: str,
-    callables: dict[str, Callable[..., OperationResult]],
-) -> Generator[Callable[..., OperationResult], None, None]:
-    f = callables.get(key)
-    if f:
-        yield f
+def iter_callables(
+    d: Mapping[str, Callable[..., ListResult]],
+    query: str,
+) -> Generator[Callable[..., ListResult], None, None]:
+    if d.get(query):
+        yield d[query]
     else:
-        yield from callables.values()
+        yield from d.values()
 
 
-def main():
+def main() -> NoReturn:
     argument_spec = default_arg_spec()
     required_if = default_required_if()
     argument_spec.update(
@@ -164,6 +49,7 @@ def main():
             'name': {'type': 'str'},
             'function_id': {'type': 'str'},
             'folder_id': {'type': 'str'},
+            'tag': {'type': 'str', 'default': '$latest'},
             'query': {
                 'type': 'str',
                 'required': False,
@@ -203,64 +89,54 @@ def main():
         required_if=required_if,
         supports_check_mode=True,
     )
-    sdk = init_sdk(module)
-    function_service = sdk.client(FunctionServiceStub)
-
+    client: FunctionServiceStub = init_sdk(module).client(FunctionServiceStub)
     result: dict[str, Any] = {}
-    function_id = module.params.get('function_id')
-    folder_id = module.params.get('folder_id')
-    name = module.params.get('name')
-    query = module.params.get('query')
 
-    callables_by_function: dict[str, Callable[..., OperationResult]] = {
-        'versions': lambda c, **kwargs: {
-            'ListFunctionsVersions': list_function_versions_by_function(c, **kwargs),
-        },
-        'policy': list_scaling_policies,
-        'tags': list_tag_history,
-        'access_bindings': list_access_bindings,
-        'operations': list_operations,
-        'runtimes': lambda c, **kwargs: list_runtimes(c),
+    function_id: str = module.params['function_id']
+    folder_id: str = module.params['folder_id']
+    name = module.params['name']
+    tag = module.params['tag']
+    query = module.params['query']
+
+    by_function_id = {
+        'versions': lambda: MessageToDict(client.ListVersions(ListFunctionsVersionsRequest(function_id=function_id))),
+        'policy': lambda: MessageToDict(
+            client.ListScalingPolicies(ListScalingPoliciesRequest(function_id=function_id)),
+        ),
+        'tags': lambda: MessageToDict(
+            client.ListTagHistory(ListFunctionTagHistoryRequest(function_id=function_id, tag=tag)),
+        ),
+        'access_bindings': lambda: MessageToDict(
+            client.ListAccessBindings(ListAccessBindingsRequest(resource_id=function_id)),
+        ),
+        'operations': lambda: MessageToDict(
+            client.ListOperations(ListFunctionOperationsRequest(function_id=function_id)),
+        ),
+        'runtimes': lambda: MessageToDict(client.ListRuntimes(ListRuntimesRequest())),
     }
 
-    callables_by_folder: dict[str, Callable[..., dict[str, dict[str, Any]]]] = {
-        'versions': lambda c, **kwargs: {
-            'ListFunctionsVersions': list_function_versions_by_folder(c, **kwargs),
-        },
-        'runtimes': lambda c, **kwargs: list_runtimes(c),
+    by_folder_id = {
+        'versions': lambda: MessageToDict(client.ListVersions(ListFunctionsVersionsRequest(folder_id=folder_id))),
+        'runtimes': lambda: MessageToDict(client.ListRuntimes(ListRuntimesRequest())),
     }
+
+    if not function_id and name:
+        with log_error(module, NotFound), log_grpc_error(module):
+            function_id = get_function_id(client, folder_id, name)
 
     if function_id:
-        with log_grpc_error(module):
-            for f in _iter_callables(query, callables_by_function):
-                result.update(f(function_service, function_id=function_id))
-
-    elif name and folder_id:
-        # FIXME: somehow filter by name does not work
-        # FIXME: workaround: filter functions by name using ListVersions
-        with log_grpc_error(module):
-            curr_function = get_function_by_name(
-                function_service,
-                folder_id=folder_id,
-                name=name,
-            )
-        if curr_function:
+        for f in iter_callables(by_function_id, query):
             with log_grpc_error(module):
-                for f in _iter_callables(query, callables_by_function):
-                    result.update(
-                        f(function_service, function_id=curr_function.get('id')),
-                    )
+                result.update(f())
+    else:
+        for f in iter_callables(by_folder_id, query):
+            with log_grpc_error(module):
+                result.update(f())
 
-    elif folder_id:
-        with log_grpc_error(module):
-            for f in _iter_callables(query, callables_by_folder):
-                result.update(f(function_service, folder_id=folder_id))
-
-    result['changed'] = False
     if module.check_mode:
-        result['msg'] = 'Check mode set but ignored for fact gathering only.'
+        result['msg'] = 'check mode set but ignored for fact gathering only'
 
-    module.exit_json(**result)
+    module.exit_json(**result, changed=False)
 
 
 if __name__ == '__main__':
