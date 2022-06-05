@@ -1,3 +1,6 @@
-[submodule "stubs"]
-	path = stubs
+[submodule "ansible-stubs"]
+	path = ansible-stubs
 	url = git@github.com:q0w/ansible-stubs.git
+[submodule "yandexcloud-stubs"]
+	path = yandexcloud-stubs
+	url = git@github.com:q0w/yandexcloud-stubs.git
