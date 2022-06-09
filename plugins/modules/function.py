@@ -28,7 +28,7 @@ def main() -> NoReturn:
             'function_id': {'type': 'str'},
             'folder_id': {'type': 'str'},
             'description': {'type': 'str'},
-            'labels': {'type': 'dict', 'elements': 'str'},
+            'labels': {'type': 'dict'},
             'state': {
                 'type': 'str',
                 'default': 'present',

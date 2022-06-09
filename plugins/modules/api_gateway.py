@@ -36,7 +36,7 @@ def main() -> NoReturn:
                 'choices': ['present', 'absent'],
             },
             'openapi_spec': {'type': 'str'},
-            'labels': {'type': 'dict', 'elements': 'str'},
+            'labels': {'type': 'dict'},
             'connectivity': {
                 'type': 'dict',
                 'options': {

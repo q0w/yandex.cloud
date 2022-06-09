@@ -37,7 +37,7 @@ def main() -> NoReturn:
             'network_load_balancer_id': {'type': 'str'},
             'name': {'type': 'str'},
             'description': {'type': 'str'},
-            'labels': {'type': 'dict', 'elements': 'str'},
+            'labels': {'type': 'dict'},
             'region_id': {'type': 'str'},
             'type': {'type': 'str', 'default': 'EXTERNAL'},
             'listener_specs': {

@@ -28,7 +28,7 @@ def main() -> NoReturn:
             'name': {'type': 'str'},
             'description': {'type': 'str'},
             'zone': {'type': 'str', 'required': True},
-            'labels': {'type': 'dict', 'elements': 'str'},
+            'labels': {'type': 'dict'},
             'visibility': {
                 'type': 'dict',
                 'options': {
