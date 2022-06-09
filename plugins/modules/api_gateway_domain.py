@@ -3,6 +3,7 @@ from __future__ import annotations
 from contextlib import suppress
 from typing import NoReturn
 
+from ..module_utils.api_gateway import get_api_gateway_id
 from ..module_utils.basic import default_arg_spec
 from ..module_utils.basic import default_required_if
 from ..module_utils.basic import init_module
@@ -13,7 +14,6 @@ from ..module_utils.basic import NotFound
 
 with suppress(ImportError):
     from google.protobuf.json_format import MessageToDict
-    from module_utils.api_gateway import get_api_gateway_id
     from yandex.cloud.serverless.apigateway.v1.apigateway_service_pb2 import AddDomainRequest
     from yandex.cloud.serverless.apigateway.v1.apigateway_service_pb2 import RemoveDomainRequest
     from yandex.cloud.serverless.apigateway.v1.apigateway_service_pb2_grpc import ApiGatewayServiceStub

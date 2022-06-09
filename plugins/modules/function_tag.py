@@ -3,9 +3,6 @@ from __future__ import annotations
 from contextlib import suppress
 from typing import NoReturn
 
-from module_utils.function import get_function_id
-from module_utils.function import get_function_version_id
-
 from ..module_utils.basic import default_arg_spec
 from ..module_utils.basic import default_required_if
 from ..module_utils.basic import init_module
@@ -13,6 +10,8 @@ from ..module_utils.basic import init_sdk
 from ..module_utils.basic import log_error
 from ..module_utils.basic import log_grpc_error
 from ..module_utils.basic import NotFound
+from ..module_utils.function import get_function_id
+from ..module_utils.function import get_function_version_id
 
 with suppress(ImportError):
     from google.protobuf.json_format import MessageToDict
