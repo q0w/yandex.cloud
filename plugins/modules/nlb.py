@@ -3,8 +3,6 @@ from __future__ import annotations
 from contextlib import suppress
 from typing import NoReturn
 
-from ansible.module_utils.basic import AnsibleModule
-
 from ..module_utils.basic import default_arg_spec
 from ..module_utils.basic import default_required_if
 from ..module_utils.basic import init_module
@@ -13,18 +11,12 @@ from ..module_utils.basic import log_grpc_error
 
 with suppress(ImportError):
     from google.protobuf.json_format import MessageToDict
-    from yandex.cloud.loadbalancer.v1.network_load_balancer_pb2 import AttachedTargetGroup
     from yandex.cloud.loadbalancer.v1.network_load_balancer_service_pb2 import CreateNetworkLoadBalancerRequest
     from yandex.cloud.loadbalancer.v1.network_load_balancer_service_pb2 import DeleteNetworkLoadBalancerRequest
     from yandex.cloud.loadbalancer.v1.network_load_balancer_service_pb2 import GetNetworkLoadBalancerRequest
     from yandex.cloud.loadbalancer.v1.network_load_balancer_service_pb2 import ListNetworkLoadBalancersRequest
     from yandex.cloud.loadbalancer.v1.network_load_balancer_service_pb2 import UpdateNetworkLoadBalancerRequest
     from yandex.cloud.loadbalancer.v1.network_load_balancer_service_pb2_grpc import NetworkLoadBalancerServiceStub
-
-
-def validate_attached_target_group(module: AnsibleModule, group: AttachedTargetGroup) -> None:
-    if not len(group.health_checks) == 1:
-        module.fail_json('health_checks: the number of elements must be exactly 1')
 
 
 def main() -> NoReturn:
@@ -130,12 +122,11 @@ def main() -> NoReturn:
     region_id = module.params['region_id']
     type = module.params['type']
     listener_specs = module.params['listener_specs']
-    attached_target_groups = module.params.get(
-        'attached_target_groups',
-    )
+    attached_target_groups = module.params['attached_target_groups']
     if attached_target_groups:
         for g in attached_target_groups:
-            validate_attached_target_group(module, g)
+            if len(g.health_checks) != 1:
+                module.fail_json('health_checks: the number of elements must be exactly 1')
 
     curr_nlb = None
     with log_grpc_error(module):
