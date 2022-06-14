@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from contextlib import suppress
-from typing import Literal
 from typing import NoReturn
 
 from ansible.module_utils.basic import AnsibleModule
@@ -16,12 +15,11 @@ with suppress(ImportError):
     from google.protobuf.json_format import MessageToDict
     from yandex.cloud.loadbalancer.v1.network_load_balancer_pb2 import AttachedTargetGroup
     from yandex.cloud.loadbalancer.v1.network_load_balancer_service_pb2 import CreateNetworkLoadBalancerRequest
+    from yandex.cloud.loadbalancer.v1.network_load_balancer_service_pb2 import DeleteNetworkLoadBalancerRequest
+    from yandex.cloud.loadbalancer.v1.network_load_balancer_service_pb2 import GetNetworkLoadBalancerRequest
+    from yandex.cloud.loadbalancer.v1.network_load_balancer_service_pb2 import ListNetworkLoadBalancersRequest
+    from yandex.cloud.loadbalancer.v1.network_load_balancer_service_pb2 import UpdateNetworkLoadBalancerRequest
     from yandex.cloud.loadbalancer.v1.network_load_balancer_service_pb2_grpc import NetworkLoadBalancerServiceStub
-
-# FIXME: "internal" is not available
-NetworkLoadBalancerType = Literal['EXTERNAL']
-Protocol = Literal['TCP', 'UDP']
-IpVersion = Literal['IPV4', 'IPV6']
 
 
 def validate_attached_target_group(module: AnsibleModule, group: AttachedTargetGroup) -> None:
@@ -39,26 +37,26 @@ def main() -> NoReturn:
             'description': {'type': 'str'},
             'labels': {'type': 'dict'},
             'region_id': {'type': 'str'},
-            'type': {'type': 'str', 'default': 'EXTERNAL'},
+            'type': {'type': 'str', 'choices': ['EXTERNAL'], 'default': 'EXTERNAL'},
             'listener_specs': {
                 'type': 'list',
                 'options': {
                     'name': {'type': 'str', 'required': True},
                     'port': {'type': 'str', 'required': True},
-                    'protocol': {'type': 'str', 'required': True},
+                    'protocol': {'type': 'str', 'choices': ['TCP', 'UDP'], 'required': True},
                     'target_port': {'type': 'str'},
                     'external_address_spec': {
                         'type': 'dict',
                         'options': {
                             'address': {'type': 'str', 'required': True},
-                            'ip_version': {'type': 'str', 'required': True},
+                            'ip_version': {'type': 'str', 'choices': ['IPV4', 'IPV6'], 'required': True},
                         },
                     },
                     'internal_address_spec': {
                         'type': 'dict',
                         'options': {
                             'address': {'type': 'str', 'required': True},
-                            'ip_version': {'type': 'str', 'required': True},
+                            'ip_version': {'type': 'str', 'choices': ['IPV4', 'IPV6'], 'required': True},
                             'subnet_id': {'type': 'str', 'required': True},
                         },
                     },
@@ -123,7 +121,10 @@ def main() -> NoReturn:
     client: NetworkLoadBalancerServiceStub = init_sdk(module).client(NetworkLoadBalancerServiceStub)
     result = {}
 
+    state = module.params['state']
+    nlb_id = module.params['network_load_balancer_id']
     folder_id = module.params['folder_id']
+    name = module.params['name']
     description = module.params['description']
     labels = module.params['labels']
     region_id = module.params['region_id']
@@ -136,20 +137,49 @@ def main() -> NoReturn:
         for g in attached_target_groups:
             validate_attached_target_group(module, g)
 
+    curr_nlb = None
     with log_grpc_error(module):
-        resp = client.Create(
-            CreateNetworkLoadBalancerRequest(
-                folder_id=folder_id,
-                description=description,
-                labels=labels,
-                region_id=region_id,
-                type=type,
-                listener_specs=listener_specs,
-                attached_target_groups=attached_target_groups,
-            ),
-        )
-        result.update(MessageToDict(resp))
+        if nlb_id:
+            curr_nlb = client.Get(GetNetworkLoadBalancerRequest(network_load_balancer_id=nlb_id))
+        else:
+            nlbs = client.List(
+                ListNetworkLoadBalancersRequest(folder_id=folder_id, filter=f'name="{name}"'),
+            ).network_load_balancers
+            if nlbs:
+                curr_nlb = nlbs[0]
 
+    with log_grpc_error(module):
+        if state == 'present':
+            if curr_nlb:
+                resp = client.Update(
+                    UpdateNetworkLoadBalancerRequest(
+                        network_load_balancer_id=curr_nlb.id,
+                        name=name,
+                        description=description,
+                        labels=labels,
+                        listener_specs=listener_specs,
+                        attached_target_groups=attached_target_groups,
+                    ),
+                )
+                result.update(MessageToDict(resp))
+            else:
+                resp = client.Create(
+                    CreateNetworkLoadBalancerRequest(
+                        folder_id=folder_id,
+                        description=description,
+                        labels=labels,
+                        region_id=region_id,
+                        type=type,
+                        listener_specs=listener_specs,
+                        attached_target_groups=attached_target_groups,
+                    ),
+                )
+                result.update(MessageToDict(resp))
+        elif state == 'absent':
+            if not curr_nlb:
+                module.fail_json(f'networkloadbalancer {nlb_id or name} not found')
+            resp = client.Delete(DeleteNetworkLoadBalancerRequest(network_load_balancer_id=curr_nlb.id))
+            result.update(MessageToDict(resp))
     module.exit_json(**result, changed=True)
 
 
